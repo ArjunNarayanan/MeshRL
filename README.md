@@ -1,4 +1,4 @@
 # Polygraph
-![example workflow](https://github.com/ArjunNarayanan/Polygraph/actions/workflows/main.yml/badge.svg)
+[![Build Status](https://github.com/ArjunNarayanan/Polygraph/actions/workflows/python-app.yml/badge.svg)](https://github.com/ArjunNarayanan/Polygraph/actions/workflows/python-app.yml)
 
 Connectivity editing operations on planar graphs
