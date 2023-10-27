@@ -1,6 +1,5 @@
 from src.polygraph import PolyGraph
 import unittest
-import numpy as np
 import itertools
 
 
