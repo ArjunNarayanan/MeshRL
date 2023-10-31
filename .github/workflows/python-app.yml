@@ -37,6 +37,10 @@ jobs:
     - name: Test with pytest
       run: |
         python -m pytest test
+    - name: Generate Report
+      run: |
+        pip install coverage
+        coverage run -m pytest test
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v3
       env:
