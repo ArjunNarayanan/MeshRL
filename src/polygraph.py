@@ -3,8 +3,13 @@ import itertools
 
 
 class PolyGraph(nx.DiGraph):
-    def __init__(self, num_halfedges, num_vertices, num_faces):
+    def __init__(self, face_loops):
         super().__init__()
+        num_faces = len(face_loops)
+        num_halfedges = sum(len(l) for l in face_loops)
+        vertex_ids = set(itertools.chain.from_iterable(face_loops))
+        num_vertices = len(vertex_ids)
+
         self.num_halfedges = num_halfedges
         self.num_vertices = num_vertices
         self.num_faces = num_faces
@@ -18,11 +23,17 @@ class PolyGraph(nx.DiGraph):
         halfedge_ids = [(idx, self.halfedge_tag) for idx in range(self.num_halfedges)]
         self.add_nodes_from(halfedge_ids, type="halfedge")
 
-        vertex_ids = [(idx, self.vertex_tag) for idx in range(self.num_vertices)]
+        vertex_ids = [(idx, self.vertex_tag) for idx in vertex_ids]
         self.add_nodes_from(vertex_ids, type="vertex")
 
         face_ids = [(idx, self.face_tag) for idx in range(self.num_faces)]
         self.add_nodes_from(face_ids, type="face")
+
+        self.initialize_half_edges_from_face_loops(face_loops)
+        self.add_halfedge_to_vertex_edges(face_loops)
+        self.add_halfedge_to_face_edges(face_loops)
+        self._add_twin_edges()
+        self._add_twin_source_target_edges()
 
     def _add_face_loop(self, source_half_edges, next_half_edges):
         assert len(source_half_edges) == len(next_half_edges)
@@ -136,59 +147,6 @@ class PolyGraph(nx.DiGraph):
         self.add_undirected_edges(boundary_nodes, boundary_source, "source")
         self.add_undirected_edges(boundary_nodes, boundary_target, "target")
 
-    # def add_twin_edges(self, vertex_connectivity):
-    #     # assumes that each column in `vertex_connectivity` represents the source-target vertices for each
-    #     # halfedge
-    #     assert vertex_connectivity.shape == (self.num_halfedges, 2)
-    #
-    #     # sort the edges by vertex ids
-    #     sorted_connectivity = np.sort(vertex_connectivity, axis=1)
-    #
-    #     # get the indices to sort the edges lexicographically, this sorts twin edges to be next to each other
-    #     sort_index = np.lexsort((sorted_connectivity[:, 1], sorted_connectivity[:, 0]))
-    #
-    #     # get the connectivity in sorted order
-    #     sorted_connectivity = sorted_connectivity[sort_index, :]
-    #     # shift the connectivity and compare it to find edges that have duplicates
-    #     # these are twin edges
-    #     shifted_connectivity = np.roll(sorted_connectivity, -1, axis=0)
-    #     has_twin = (sorted_connectivity == shifted_connectivity).all(axis=1)
-    #
-    #     # get the half edge indices in sorted order
-    #     half_edge_ids = np.arange(self.num_halfedges)[sort_index]
-    #
-    #     # associate half-edges to their twins
-    #     src_halfedge = half_edge_ids[has_twin]
-    #     dst_halfedge = half_edge_ids[np.roll(has_twin, 1)]
-    #
-    #     # add twin edges between these half edges
-    #     src_halfedge_verts = [(idx, self.halfedge_tag) for idx in src_halfedge]
-    #     dst_halfedge_verts = [(idx, self.halfedge_tag) for idx in dst_halfedge]
-    #     self.add_undirected_edges(src_halfedge_verts, dst_halfedge_verts, "twin")
-    #
-    #     # find all boundary edges which do not have twins
-    #     # make sure you select ALL indices that have twins -- for this you need to roll forward
-    #     # the has_twin vector
-    #     _has_twin = np.logical_or(has_twin, np.roll(has_twin, +1))
-    #     is_boundary = ~_has_twin
-    #     self.num_boundary = np.count_nonzero(is_boundary)
-    #     # create num_boundary boundary half edges
-    #     boundary_node_ids = [(idx, self.boundary_tag) for idx in range(self.num_boundary)]
-    #     self.add_nodes_from(boundary_node_ids, type="boundary")
-    #
-    #     # add twin edges between half edges and boundary nodes
-    #     boundary_halfedge_ids = half_edge_ids[is_boundary]
-    #     boundary_halfedge_verts = [(idx, self.halfedge_tag) for idx in boundary_halfedge_ids]
-    #     self.add_undirected_edges(boundary_halfedge_verts, boundary_node_ids, name="twin")
-    #
-    #     # target vertices of half edges on boundary are source vertices of boundary nodes
-    #     boundary_src_nodes = [self.target_vertex(half_edge_idx) for half_edge_idx in boundary_halfedge_verts]
-    #     self.add_undirected_edges(boundary_node_ids, boundary_src_nodes, name="source")
-    #
-    #     # source vertices of half edges on boundary are target vertices of boundary nodes
-    #     boundary_target_nodes = [self.source_vertex(half_edge_idx) for half_edge_idx in boundary_halfedge_verts]
-    #     self.add_undirected_edges(boundary_node_ids, boundary_target_nodes, name="target")
-
     def source_vertex(self, halfedge_index):
         halfedge_index = self._ensure_tag_form(halfedge_index, self.halfedge_tag)
         return next(dst for _, dst, data in self.edges(halfedge_index, data=True) if data.get("type") == "source")
@@ -222,3 +180,8 @@ class PolyGraph(nx.DiGraph):
             target for src, target, data in self.edges(halfedge_index, data=True) if data.get("type") == "face"
         )
         return face
+
+    def vertex_degree(self, vertex_index):
+        vertex_index = self._ensure_tag_form(vertex_index, self.vertex_tag)
+        d = self.in_degree(vertex_index) // 2
+        return d

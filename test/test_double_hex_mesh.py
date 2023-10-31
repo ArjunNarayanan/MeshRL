@@ -1,6 +1,5 @@
 from src.polygraph import PolyGraph
 import unittest
-import itertools
 
 
 def initialize_double_hex_graph():
@@ -9,17 +8,8 @@ def initialize_double_hex_graph():
         [2, 3, 4, 5, 6, 7]
     ]
 
-    num_faces = len(face_loops)
-    num_half_edges = sum((len(l) for l in face_loops))
-    vertex_ids = set(itertools.chain.from_iterable(face_loops))
-    num_vertices = len(vertex_ids)
+    graph = PolyGraph(face_loops)
 
-    graph = PolyGraph(num_half_edges, num_vertices, num_faces)
-    graph.initialize_half_edges_from_face_loops(face_loops)
-    graph.add_halfedge_to_vertex_edges(face_loops)
-    graph.add_halfedge_to_face_edges(face_loops)
-    graph._add_twin_edges()
-    graph._add_twin_source_target_edges()
     return graph
 
 
@@ -86,7 +76,7 @@ class TestHalfEdgeConnectivity(unittest.TestCase):
             )
         )
 
-    def test_source_edges(self):
+    def test_source_vertices(self):
         source_vertices = [0, 1, 2, 7, 8, 9, 2, 3, 4, 5, 6, 7]
         self.assertTrue(
             all(self.graph.source_vertex(h) == (v, self.graph.vertex_tag) for (h, v) in
@@ -102,9 +92,13 @@ class TestHalfEdgeConnectivity(unittest.TestCase):
             )
         )
 
-    def test_target_edges(self):
+    def test_target_vertices(self):
         vertex_ids = [0, 1, 2, 2, 3, 4, 5, 6, 7, 7, 8, 9]
         target_halfedge_ids = [5, 0, 1, 11, 6, 7, 8, 9, 10, 2, 3, 4]
+
+        self.assertTrue(all(self.graph.target_vertex(h) == (v, self.graph.vertex_tag) for (h, v) in
+                            zip(target_halfedge_ids, vertex_ids)))
+
         self.assertTrue(
             all(
                 self.graph.has_edge((v, self.graph.vertex_tag), (h, self.graph.halfedge_tag)) for (v, h) in
@@ -136,6 +130,13 @@ class TestHalfEdgeConnectivity(unittest.TestCase):
         self.assertTrue(
             all(self.graph.twin_halfedge(h) == t for h, t in zip(range(self.graph.num_halfedges), twin_nodes))
         )
+
+        halfedge_id = [0, 1, 3, 4, 5, 6, 7, 8, 9, 10]
+        self.assertTrue(all(self.graph.twin_halfedge((b, btag)) == (h, htag) for b, h in zip(range(10), halfedge_id)))
+
+    def test_vertex_degree(self):
+        vertex_degree = [2, 2, 3, 2, 2, 2, 2, 3, 2, 2]
+        self.assertTrue(all(self.graph.vertex_degree(vid) == vd for vid, vd in zip(range(10), vertex_degree)))
 
 
 # graph = initialize_double_hex_graph()
