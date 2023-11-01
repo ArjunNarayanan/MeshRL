@@ -92,6 +92,24 @@ class TestHalfEdgeConnectivity(unittest.TestCase):
             )
         )
 
+    def test_boundary_source(self):
+        boundary_ids = range(self.graph.num_boundary)
+        source_ids = [1, 0, 2, 3, 4]
+        btag = self.graph.boundary_tag
+        vtag = self.graph.vertex_tag
+
+        self.assertTrue(all(self.graph.source_vertex((b, btag)) == (s, vtag) for b, s in zip(boundary_ids, source_ids)))
+        self.assertTrue(all(self.graph.has_edge((s, vtag), (b, btag)) for s, b in zip(source_ids, boundary_ids)))
+
+    def test_boundary_target(self):
+        boundary_ids = range(self.graph.num_boundary)
+        target_ids = [0, 4, 1, 2, 3]
+        btag = self.graph.boundary_tag
+        vtag = self.graph.vertex_tag
+
+        self.assertTrue(all(self.graph.target_vertex((b, btag)) == (s, vtag) for b, s in zip(boundary_ids, target_ids)))
+        self.assertTrue(all(self.graph.has_edge((s, vtag), (b, btag)) for s, b in zip(target_ids, boundary_ids)))
+
     def test_face_edges(self):
         face_ids = 3 * [0] + 4 * [1]
         self.assertTrue(

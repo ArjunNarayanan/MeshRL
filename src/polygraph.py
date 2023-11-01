@@ -147,13 +147,21 @@ class PolyGraph(nx.DiGraph):
         self.add_undirected_edges(boundary_nodes, boundary_source, "source")
         self.add_undirected_edges(boundary_nodes, boundary_target, "target")
 
-    def source_vertex(self, halfedge_index):
+    def source_vertex(self, halfedge_index, tag=True):
         halfedge_index = self._ensure_tag_form(halfedge_index, self.halfedge_tag)
-        return next(dst for _, dst, data in self.edges(halfedge_index, data=True) if data.get("type") == "source")
+        vertex_id = next(dst for _, dst, data in self.edges(halfedge_index, data=True) if data.get("type") == "source")
+        if tag:
+            return vertex_id
+        else:
+            return vertex_id[0]
 
-    def target_vertex(self, halfedge_index):
+    def target_vertex(self, halfedge_index, tag=True):
         halfedge_index = self._ensure_tag_form(halfedge_index, self.halfedge_tag)
-        return next(dst for _, dst, data in self.edges(halfedge_index, data=True) if data.get("type") == "target")
+        vertex_id = next(dst for _, dst, data in self.edges(halfedge_index, data=True) if data.get("type") == "target")
+        if tag:
+            return vertex_id
+        else:
+            return vertex_id[0]
 
     def twin_halfedge(self, halfedge_index):
         halfedge_index = self._ensure_tag_form(halfedge_index, self.halfedge_tag)
@@ -174,12 +182,15 @@ class PolyGraph(nx.DiGraph):
         )
         return prev_edge
 
-    def face(self, halfedge_index):
+    def face(self, halfedge_index, tag=True):
         halfedge_index = self._ensure_tag_form(halfedge_index, self.halfedge_tag)
         face = next(
             target for src, target, data in self.edges(halfedge_index, data=True) if data.get("type") == "face"
         )
-        return face
+        if tag:
+            return face
+        else:
+            return face[0]
 
     def vertex_degree(self, vertex_index):
         vertex_index = self._ensure_tag_form(vertex_index, self.vertex_tag)
