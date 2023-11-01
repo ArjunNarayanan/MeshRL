@@ -36,16 +36,16 @@ class TestHalfEdgeConnectivity(unittest.TestCase):
         self.assertEqual(len(face_edges), 24)
 
     def test_num_graph_nodes(self):
-        num_halfedge = len([v for v, data in self.graph.nodes(data=True) if data.get("type") == "halfedge"])
+        num_halfedge = self.graph.number_of_halfedges()
         self.assertEqual(num_halfedge, 12)
 
-        num_verts = len([v for v, data in self.graph.nodes(data=True) if data.get("type") == "vertex"])
+        num_verts = self.graph.number_of_vertices()
         self.assertEqual(num_verts, 10)
 
-        num_faces = len([v for v, data in self.graph.nodes(data=True) if data.get("type") == "face"])
+        num_faces = self.graph.number_of_faces()
         self.assertEqual(num_faces, 2)
 
-        num_boundary = len([v for v in self.graph.nodes() if v[1] == self.graph.boundary_tag])
+        num_boundary = self.graph._number_of_nodes("boundary")
         self.assertEqual(num_boundary, 10)
 
         total_num_nodes = self.graph.number_of_nodes()

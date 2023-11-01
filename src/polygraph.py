@@ -10,6 +10,9 @@ class PolyGraph(nx.DiGraph):
         vertex_ids = set(itertools.chain.from_iterable(face_loops))
         num_vertices = len(vertex_ids)
 
+        # TODO: technically these are not the number of halfedges, faces, vertices etc.
+        #       they are just they index of the next halfedge, face, etc. Change nomenclature, and add a method
+        #       that actually computes number of halfedges etc. by iterating over the nodes in the graph.
         self.num_halfedges = num_halfedges
         self.num_vertices = num_vertices
         self.num_faces = num_faces
@@ -65,11 +68,19 @@ class PolyGraph(nx.DiGraph):
             self.add_sequential_face_loop(start, stop)
             start = stop + 1
 
+    def add_undirected_edge(self, source, dst, name):
+        self.add_edge(source, dst, type=name)
+        self.add_edge(dst, source, type=name)
+
     def add_undirected_edges(self, source, dst, name):
         # adds edges from source to dst and vice verse
         # both sets of edges are assigned the same name
         self.add_edges_from(zip(source, dst), type=name)
         self.add_edges_from(zip(dst, source), type=name)
+
+    def remove_undirected_edge(self, source, dst):
+        self.remove_edge(source, dst)
+        self.remove_edge(dst, source)
 
     def add_edges_to_halfedge_source(self, face_loops):
         source_vertices = [(v, self.vertex_tag) for v in itertools.chain.from_iterable(face_loops)]
@@ -130,7 +141,7 @@ class PolyGraph(nx.DiGraph):
                 boundary_count += 1
 
         self.num_boundary = boundary_count
-        self.add_nodes_from(boundary_nodes)
+        self.add_nodes_from(boundary_nodes, type="boundary")
         self.add_undirected_edges(halfedge_nodes, twins, "twin")
 
     def _add_twin_source_target_edges(self):
@@ -146,6 +157,18 @@ class PolyGraph(nx.DiGraph):
 
         self.add_undirected_edges(boundary_nodes, boundary_source, "source")
         self.add_undirected_edges(boundary_nodes, boundary_target, "target")
+
+    def _number_of_nodes(self, type):
+        return sum(1 for vert, data in self.nodes(data=True) if data.get("type") == type)
+
+    def number_of_vertices(self):
+        return self._number_of_nodes("vertex")
+
+    def number_of_halfedges(self):
+        return self._number_of_nodes("halfedge")
+
+    def number_of_faces(self):
+        return self._number_of_nodes("face")
 
     def source_vertex(self, halfedge_index, tag=True):
         halfedge_index = self._ensure_tag_form(halfedge_index, self.halfedge_tag)
@@ -163,24 +186,33 @@ class PolyGraph(nx.DiGraph):
         else:
             return vertex_id[0]
 
-    def twin_halfedge(self, halfedge_index):
+    def twin_halfedge(self, halfedge_index, tag=True):
         halfedge_index = self._ensure_tag_form(halfedge_index, self.halfedge_tag)
         twin = next(target for src, target, data in self.edges(halfedge_index, data=True) if data.get("type") == "twin")
-        return twin
+        if tag:
+            return twin
+        else:
+            return twin[0]
 
-    def next_halfedge(self, halfedge_index):
+    def next_halfedge(self, halfedge_index, tag=True):
         halfedge_index = self._ensure_tag_form(halfedge_index, self.halfedge_tag)
         next_edge = next(
             target for src, target, data in self.edges(halfedge_index, data=True) if data.get("type") == "next"
         )
-        return next_edge
+        if tag:
+            return next_edge
+        else:
+            return next_edge[0]
 
-    def previous_halfedge(self, halfedge_index):
+    def previous_halfedge(self, halfedge_index, tag=True):
         halfedge_index = self._ensure_tag_form(halfedge_index, self.halfedge_tag)
         prev_edge = next(
             target for src, target, data in self.edges(halfedge_index, data=True) if data.get("type") == "previous"
         )
-        return prev_edge
+        if tag:
+            return prev_edge
+        else:
+            return prev_edge[0]
 
     def face(self, halfedge_index, tag=True):
         halfedge_index = self._ensure_tag_form(halfedge_index, self.halfedge_tag)
@@ -196,3 +228,61 @@ class PolyGraph(nx.DiGraph):
         vertex_index = self._ensure_tag_form(vertex_index, self.vertex_tag)
         d = self.in_degree(vertex_index) // 2
         return d
+
+    def face_degree(self, face_index):
+        face_index = self._ensure_tag_form(face_index, self.face_tag)
+        d = self.in_degree(face_index)
+        return d
+
+    def create_face(self):
+        new_face_idx = (self.num_faces, self.face_tag)
+        self.add_node(new_face_idx, type="face")
+        self.num_faces += 1
+        return new_face_idx
+
+    def create_halfedge(self, next_halfedge, prev_halfedge):
+        source_vertex = self.target_vertex(prev_halfedge)
+        target_vertex = self.source_vertex(next_halfedge)
+        face_idx = self.face(next_halfedge)
+        halfedge_idx = (self.num_halfedges, self.halfedge_tag)
+        self.add_node(halfedge_idx, type="halfedge")
+        self.add_undirected_edge(halfedge_idx, source_vertex, "source")
+        self.add_undirected_edge(halfedge_idx, target_vertex, "target")
+        self.add_undirected_edge(halfedge_idx, face_idx, "face")
+        self.num_halfedges += 1
+        return halfedge_idx
+
+    def associate_previous_next(self, prev_halfedge, next_halfedge):
+        self.add_edge(prev_halfedge, next_halfedge, type="next")
+        self.add_edge(next_halfedge, prev_halfedge, type="previous")
+
+    def insert_edge(self, hidx, k):
+        """insert an edge from source of `hidx` to target of halfedge that is k `next` steps away"""
+        hidx = self._ensure_tag_form(hidx, self.halfedge_tag)
+        face_idx = self.face(hidx)
+        assert 1 <= k <= self.face_degree(face_idx)
+
+        new_face_idx = self.create_face()
+        # remove edges to current face and add edge to new face
+        current_halfedge = hidx
+        for count in range(k + 1):
+            self.remove_undirected_edge(current_halfedge, face_idx)
+            self.add_undirected_edge(current_halfedge, new_face_idx, "face")
+            current_halfedge = self.next_halfedge(current_halfedge)
+
+        new_face_next_halfedge = hidx
+        new_face_prev_halfedge = self.previous_halfedge(current_halfedge)
+        old_face_next_halfedge = current_halfedge
+        old_face_prev_halfedge = self.previous_halfedge(hidx)
+
+        self.remove_undirected_edge(new_face_prev_halfedge, old_face_next_halfedge)
+        self.remove_undirected_edge(new_face_next_halfedge, old_face_prev_halfedge)
+
+        new_face_new_halfedge = self.create_halfedge(new_face_next_halfedge, new_face_prev_halfedge)
+        old_face_new_halfedge = self.create_halfedge(old_face_next_halfedge, old_face_prev_halfedge)
+
+        self.associate_previous_next(new_face_prev_halfedge, new_face_new_halfedge)
+        self.associate_previous_next(new_face_new_halfedge, new_face_next_halfedge)
+        self.associate_previous_next(old_face_new_halfedge, old_face_next_halfedge)
+        self.associate_previous_next(old_face_prev_halfedge, old_face_new_halfedge)
+        self.add_undirected_edge(new_face_new_halfedge, old_face_new_halfedge, "twin")
