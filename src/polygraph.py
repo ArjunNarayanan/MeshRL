@@ -260,7 +260,8 @@ class PolyGraph(nx.DiGraph):
         """insert an edge from source of `hidx` to target of halfedge that is k `next` steps away"""
         hidx = self._ensure_tag_form(hidx, self.halfedge_tag)
         face_idx = self.face(hidx)
-        assert 1 <= k <= self.face_degree(face_idx)
+        if not 1 <= k <= self.face_degree(face_idx) - 3:
+            raise ValueError("Expected 1 <= k <= faceDegree - 3, got k = ", k)
 
         new_face_idx = self.create_face()
         # remove edges to current face and add edge to new face

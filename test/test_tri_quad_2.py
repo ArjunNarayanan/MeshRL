@@ -149,6 +149,12 @@ class TestHalfEdgeConnectivity(unittest.TestCase):
         self.assertTrue(
             all(self.graph.vertex_degree(vid) == vd for vid, vd in zip(range(self.graph.num_vertices), vertex_degree)))
 
+    def test_face_degree(self):
+        face_degrees = [4, 3, 4, 4]
+        num_faces = self.graph.number_of_faces()
+        self.assertEqual(len(face_degrees), num_faces)
+        self.assertTrue(all(self.graph.face_degree(fidx) == fd for (fidx, fd) in zip(range(num_faces), face_degrees)))
+
 
 if __name__ == "__main__":
     unittest.main()

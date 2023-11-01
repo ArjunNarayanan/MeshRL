@@ -158,6 +158,19 @@ class TestInsertHalfedge(unittest.TestCase):
             )
         )
 
+    def test_vertex_degree(self):
+        vertex_degrees = [3, 2, 4, 2, 2, 2, 2, 3, 2, 2]
+        num_vertices = self.graph.number_of_vertices()
+        self.assertEqual(num_vertices, len(vertex_degrees))
+        self.assertTrue(all(self.graph.vertex_degree(vidx) == vd for (vidx, vd) in
+                            zip(range(self.graph.number_of_vertices()), vertex_degrees)))
+
+    def test_face_degree(self):
+        face_degrees = [5, 6, 3]
+        num_faces = self.graph.number_of_faces()
+        self.assertEqual(len(face_degrees), num_faces)
+        self.assertTrue(all(self.graph.face_degree(fidx) == fd for (fidx, fd) in zip(range(num_faces), face_degrees)))
+
 
 # graph = initialize_double_hex_graph()
 if __name__ == "__main__":
