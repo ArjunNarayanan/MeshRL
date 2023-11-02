@@ -155,6 +155,19 @@ class TestHalfEdgeConnectivity(unittest.TestCase):
         self.assertEqual(len(face_degrees), num_faces)
         self.assertTrue(all(self.graph.face_degree(fidx) == fd for (fidx, fd) in zip(range(num_faces), face_degrees)))
 
+    def test_on_boundary(self):
+        t = True
+        f = False
+        on_boundary = [t, f, f, t, f, f, f, f, f, t, t, t, t, t, f]
+        num_halfedges = self.graph.number_of_halfedges()
+        self.assertEqual(num_halfedges, len(on_boundary))
+
+        self.assertTrue(
+            all(
+                self.graph.halfedge_on_boundary(hidx) == flag for hidx, flag in zip(range(num_halfedges), on_boundary)
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

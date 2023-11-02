@@ -6,7 +6,7 @@ class Visualizer:
         self.graph = graph
         self.vertex_size = vertex_size
         self.shrink = shrink
-        assert self.graph.num_vertices == len(coords)
+        assert self.graph.number_of_vertices() == len(coords)
         self.coords = coords
 
         fig, ax = plt.subplots()

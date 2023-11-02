@@ -224,6 +224,10 @@ class PolyGraph(nx.DiGraph):
         else:
             return face[0]
 
+    def halfedge_on_boundary(self, hidx):
+        twin = self.twin_halfedge(hidx)
+        return self.nodes[twin]["type"] == "boundary"
+
     def vertex_degree(self, vertex_index):
         vertex_index = self._ensure_tag_form(vertex_index, self.vertex_tag)
         d = self.in_degree(vertex_index) // 2
@@ -249,12 +253,34 @@ class PolyGraph(nx.DiGraph):
         self.add_undirected_edge(halfedge_idx, source_vertex, "source")
         self.add_undirected_edge(halfedge_idx, target_vertex, "target")
         self.add_undirected_edge(halfedge_idx, face_idx, "face")
+        self.associate_previous_next(prev_halfedge, halfedge_idx)
+        self.associate_previous_next(halfedge_idx, next_halfedge)
         self.num_halfedges += 1
+
         return halfedge_idx
+
+    def create_boundary_halfedge(self, target_vertex, source_vertex):
+        boundary_edge = (self.num_boundary, self.boundary_tag)
+        self.add_node(boundary_edge, type="boundary")
+        self.add_undirected_edge(boundary_edge, target_vertex, "target")
+        self.add_undirected_edge(boundary_edge, source_vertex, "source")
+        self.num_boundary += 1
+        return boundary_edge
+
+    def create_vertex(self):
+        new_vertex_idx = (self.num_vertices, self.vertex_tag)
+        self.add_node(new_vertex_idx, type="vertex")
+        self.num_vertices += 1
+        return new_vertex_idx
 
     def associate_previous_next(self, prev_halfedge, next_halfedge):
         self.add_edge(prev_halfedge, next_halfedge, type="next")
         self.add_edge(next_halfedge, prev_halfedge, type="previous")
+
+    def disassociate_next_halfedge(self, halfedge):
+        next_halfedge = self.next_halfedge(halfedge)
+        self.remove_edge(halfedge, next_halfedge)
+        self.remove_edge(next_halfedge, halfedge)
 
     def insert_edge(self, hidx, k):
         """insert an edge from source of `hidx` to target of halfedge that is k `next` steps away"""
@@ -281,9 +307,35 @@ class PolyGraph(nx.DiGraph):
 
         new_face_new_halfedge = self.create_halfedge(new_face_next_halfedge, new_face_prev_halfedge)
         old_face_new_halfedge = self.create_halfedge(old_face_next_halfedge, old_face_prev_halfedge)
-
-        self.associate_previous_next(new_face_prev_halfedge, new_face_new_halfedge)
-        self.associate_previous_next(new_face_new_halfedge, new_face_next_halfedge)
-        self.associate_previous_next(old_face_new_halfedge, old_face_next_halfedge)
-        self.associate_previous_next(old_face_prev_halfedge, old_face_new_halfedge)
         self.add_undirected_edge(new_face_new_halfedge, old_face_new_halfedge, "twin")
+
+    def set_target_vertex(self, hidx, vidx):
+        """
+        delete edges between hidx and its current target vertex
+        delete edges between twin of hidx and current target of hidx
+        insert target edges between hidx and vidx
+        insert source edges between twin of hidx and vidx
+
+        :param hidx: halfedge index
+        :param vidx: vertex index
+        :return: None
+        """
+        current_target = self.target_vertex(hidx)
+        twin_edge = self.twin_halfedge(hidx)
+        self.remove_undirected_edge(hidx, current_target)
+        self.remove_undirected_edge(twin_edge, current_target)
+        self.add_undirected_edge(hidx, vidx, "target")
+        self.add_undirected_edge(twin_edge, vidx, "source")
+
+    def _insert_boundary_vertex(self, hidx):
+        assert self.halfedge_on_boundary(hidx)
+        new_vertex_idx = self.create_vertex()
+        current_target_vertex = self.target_vertex(hidx)
+        next_halfedge = self.next_halfedge(hidx)
+        self.disassociate_next_halfedge(hidx)
+
+        self.set_target_vertex(hidx, new_vertex_idx)
+
+        new_halfedge = self.create_halfedge(next_halfedge, hidx)
+        new_boundary_edge = self.create_boundary_halfedge(new_vertex_idx, current_target_vertex)
+        self.add_undirected_edge(new_halfedge, new_boundary_edge, "twin")
