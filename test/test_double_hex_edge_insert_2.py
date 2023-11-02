@@ -8,7 +8,7 @@ def initialize_double_hex_graph():
         [2, 3, 4, 5, 6, 7]
     ]
 
-    graph = PolyGraph(face_loops)
+    graph = PolyGraph.from_face_loops(face_loops)
     graph.insert_edge(2, 3)
 
     return graph

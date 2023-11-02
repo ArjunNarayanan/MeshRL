@@ -8,7 +8,7 @@ def initialize_tri_quad_graph():
         [1, 2, 3, 4]
     ]
 
-    graph = PolyGraph(face_loops)
+    graph = PolyGraph.from_face_loops(face_loops)
 
     return graph
 
@@ -93,7 +93,7 @@ class TestHalfEdgeConnectivity(unittest.TestCase):
         )
 
     def test_boundary_source(self):
-        boundary_ids = range(self.graph.num_boundary)
+        boundary_ids = range(self.graph.next_boundary_index)
         source_ids = [1, 0, 2, 3, 4]
         btag = self.graph.boundary_tag
         vtag = self.graph.vertex_tag
@@ -102,7 +102,7 @@ class TestHalfEdgeConnectivity(unittest.TestCase):
         self.assertTrue(all(self.graph.has_edge((s, vtag), (b, btag)) for s, b in zip(source_ids, boundary_ids)))
 
     def test_boundary_target(self):
-        boundary_ids = range(self.graph.num_boundary)
+        boundary_ids = range(self.graph.next_boundary_index)
         target_ids = [0, 4, 1, 2, 3]
         btag = self.graph.boundary_tag
         vtag = self.graph.vertex_tag
@@ -132,7 +132,7 @@ class TestHalfEdgeConnectivity(unittest.TestCase):
         twin_tags = [btag] + [htag] + 4 * [btag] + [htag]
         twin_nodes = [(node_id, node_tag) for node_id, node_tag in zip(twin_id, twin_tags)]
         self.assertTrue(
-            all(self.graph.twin_halfedge(h) == t for h, t in zip(range(self.graph.num_halfedges), twin_nodes))
+            all(self.graph.twin_halfedge(h) == t for h, t in zip(range(self.graph.next_halfedge_index), twin_nodes))
         )
 
         halfedge_id = [0, 2, 3, 4, 5]

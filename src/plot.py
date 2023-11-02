@@ -76,5 +76,5 @@ class Visualizer:
         self.ax.text(lx, ly, str(idx), color="white", verticalalignment="center", horizontalalignment="center")
 
     def plot_all_halfedges(self):
-        for idx in range(self.graph.num_halfedges):
+        for idx in range(self.graph.next_halfedge_index):
             self.plot_halfedge(idx)

@@ -3,40 +3,49 @@ import itertools
 
 
 class PolyGraph(nx.DiGraph):
-    def __init__(self, face_loops):
+    def __init__(self):
         super().__init__()
-        num_faces = len(face_loops)
-        num_halfedges = sum(len(l) for l in face_loops)
-        vertex_ids = set(itertools.chain.from_iterable(face_loops))
-        num_vertices = len(vertex_ids)
 
-        # TODO: technically these are not the number of halfedges, faces, vertices etc.
-        #       they are just they index of the next halfedge, face, etc. Change nomenclature, and add a method
-        #       that actually computes number of halfedges etc. by iterating over the nodes in the graph.
-        self.num_halfedges = num_halfedges
-        self.num_vertices = num_vertices
-        self.num_faces = num_faces
-        self.num_boundary = 0
+        self.next_halfedge_index = 0
+        self.next_vertex_index = 0
+        self.next_face_index = 0
+        self.next_boundary_index = 0
 
         self.halfedge_tag = "h"
         self.vertex_tag = "v"
         self.face_tag = "f"
         self.boundary_tag = "b"
 
-        halfedge_ids = [(idx, self.halfedge_tag) for idx in range(self.num_halfedges)]
-        self.add_nodes_from(halfedge_ids, type="halfedge")
+    @classmethod
+    def from_face_loops(cls, face_loops):
+        graph = cls()
 
-        vertex_ids = [(idx, self.vertex_tag) for idx in vertex_ids]
-        self.add_nodes_from(vertex_ids, type="vertex")
+        num_faces = len(face_loops)
+        num_halfedges = sum(len(l) for l in face_loops)
+        vertex_ids = set(itertools.chain.from_iterable(face_loops))
+        num_vertices = len(vertex_ids)
 
-        face_ids = [(idx, self.face_tag) for idx in range(self.num_faces)]
-        self.add_nodes_from(face_ids, type="face")
+        graph.next_halfedge_index = num_halfedges
+        graph.next_vertex_index = num_vertices
+        graph.next_face_index = num_faces
+        graph.next_boundary_index = 0
 
-        self.initialize_half_edges_from_face_loops(face_loops)
-        self.add_halfedge_to_vertex_edges(face_loops)
-        self.add_halfedge_to_face_edges(face_loops)
-        self._add_twin_edges()
-        self._add_twin_source_target_edges()
+        halfedge_ids = [(idx, graph.halfedge_tag) for idx in range(graph.next_halfedge_index)]
+        graph.add_nodes_from(halfedge_ids, type="halfedge")
+
+        vertex_ids = [(idx, graph.vertex_tag) for idx in vertex_ids]
+        graph.add_nodes_from(vertex_ids, type="vertex")
+
+        face_ids = [(idx, graph.face_tag) for idx in range(graph.next_face_index)]
+        graph.add_nodes_from(face_ids, type="face")
+
+        graph.initialize_half_edges_from_face_loops(face_loops)
+        graph.add_halfedge_to_vertex_edges(face_loops)
+        graph.add_halfedge_to_face_edges(face_loops)
+        graph._add_twin_edges()
+        graph._add_twin_source_target_edges()
+
+        return graph
 
     def _add_face_loop(self, source_half_edges, next_half_edges):
         assert len(source_half_edges) == len(next_half_edges)
@@ -122,7 +131,7 @@ class PolyGraph(nx.DiGraph):
             return idx
 
     def _add_twin_edges(self):
-        halfedge_nodes = [(h, self.halfedge_tag) for h in range(self.num_halfedges)]
+        halfedge_nodes = [(h, self.halfedge_tag) for h in range(self.next_halfedge_index)]
         src_target = [(self.source_vertex(h), self.target_vertex(h)) for h in halfedge_nodes]
         src_target_to_halfedge = dict(zip(src_target, halfedge_nodes))
         twins = []
@@ -140,7 +149,7 @@ class PolyGraph(nx.DiGraph):
                 twins.append(boundary_node)
                 boundary_count += 1
 
-        self.num_boundary = boundary_count
+        self.next_boundary_index = boundary_count
         self.add_nodes_from(boundary_nodes, type="boundary")
         self.add_undirected_edges(halfedge_nodes, twins, "twin")
 
@@ -239,38 +248,38 @@ class PolyGraph(nx.DiGraph):
         return d
 
     def create_face(self):
-        new_face_idx = (self.num_faces, self.face_tag)
+        new_face_idx = (self.next_face_index, self.face_tag)
         self.add_node(new_face_idx, type="face")
-        self.num_faces += 1
+        self.next_face_index += 1
         return new_face_idx
 
     def create_halfedge(self, next_halfedge, prev_halfedge):
         source_vertex = self.target_vertex(prev_halfedge)
         target_vertex = self.source_vertex(next_halfedge)
         face_idx = self.face(next_halfedge)
-        halfedge_idx = (self.num_halfedges, self.halfedge_tag)
+        halfedge_idx = (self.next_halfedge_index, self.halfedge_tag)
         self.add_node(halfedge_idx, type="halfedge")
         self.add_undirected_edge(halfedge_idx, source_vertex, "source")
         self.add_undirected_edge(halfedge_idx, target_vertex, "target")
         self.add_undirected_edge(halfedge_idx, face_idx, "face")
         self.associate_previous_next(prev_halfedge, halfedge_idx)
         self.associate_previous_next(halfedge_idx, next_halfedge)
-        self.num_halfedges += 1
+        self.next_halfedge_index += 1
 
         return halfedge_idx
 
     def create_boundary_halfedge(self, target_vertex, source_vertex):
-        boundary_edge = (self.num_boundary, self.boundary_tag)
+        boundary_edge = (self.next_boundary_index, self.boundary_tag)
         self.add_node(boundary_edge, type="boundary")
         self.add_undirected_edge(boundary_edge, target_vertex, "target")
         self.add_undirected_edge(boundary_edge, source_vertex, "source")
-        self.num_boundary += 1
+        self.next_boundary_index += 1
         return boundary_edge
 
     def create_vertex(self):
-        new_vertex_idx = (self.num_vertices, self.vertex_tag)
+        new_vertex_idx = (self.next_vertex_index, self.vertex_tag)
         self.add_node(new_vertex_idx, type="vertex")
-        self.num_vertices += 1
+        self.next_vertex_index += 1
         return new_vertex_idx
 
     def associate_previous_next(self, prev_halfedge, next_halfedge):

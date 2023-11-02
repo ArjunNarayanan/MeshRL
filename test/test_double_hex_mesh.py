@@ -8,7 +8,7 @@ def initialize_double_hex_graph():
         [2, 3, 4, 5, 6, 7]
     ]
 
-    graph = PolyGraph(face_loops)
+    graph = PolyGraph.from_face_loops(face_loops)
 
     return graph
 
@@ -107,7 +107,7 @@ class TestHalfEdgeConnectivity(unittest.TestCase):
         )
 
     def test_boundary_source(self):
-        boundary_ids = range(self.graph.num_boundary)
+        boundary_ids = range(self.graph.next_boundary_index)
         source_ids = [1, 2, 8, 9, 0, 3, 4, 5, 6, 7]
         btag = self.graph.boundary_tag
         vtag = self.graph.vertex_tag
@@ -116,7 +116,7 @@ class TestHalfEdgeConnectivity(unittest.TestCase):
         self.assertTrue(all(self.graph.has_edge((s, vtag), (b, btag)) for s, b in zip(source_ids, boundary_ids)))
 
     def test_boundary_target(self):
-        boundary_ids = range(self.graph.num_boundary)
+        boundary_ids = range(self.graph.next_boundary_index)
         target_ids = [0, 1, 7, 8, 9, 2, 3, 4, 5, 6]
         btag = self.graph.boundary_tag
         vtag = self.graph.vertex_tag
@@ -129,14 +129,14 @@ class TestHalfEdgeConnectivity(unittest.TestCase):
         self.assertTrue(
             all(
                 self.graph.face(halfedge) == (face, self.graph.face_tag) for halfedge, face in
-                zip(range(self.graph.num_halfedges), face_ids)
+                zip(range(self.graph.next_halfedge_index), face_ids)
             )
         )
 
         self.assertTrue(
             all(
                 self.graph.has_edge((f, self.graph.face_tag), (h, self.graph.halfedge_tag))
-                for (f, h) in zip(face_ids, range(self.graph.num_halfedges))
+                for (f, h) in zip(face_ids, range(self.graph.next_halfedge_index))
             )
         )
 
@@ -147,12 +147,12 @@ class TestHalfEdgeConnectivity(unittest.TestCase):
         twin_tags = 2 * [btag] + [htag] + 8 * [btag] + [htag]
         twin_nodes = [(node_id, node_tag) for node_id, node_tag in zip(twin_id, twin_tags)]
         self.assertTrue(
-            all(self.graph.twin_halfedge(h) == t for h, t in zip(range(self.graph.num_halfedges), twin_nodes))
+            all(self.graph.twin_halfedge(h) == t for h, t in zip(range(self.graph.next_halfedge_index), twin_nodes))
         )
 
         halfedge_id = [0, 1, 3, 4, 5, 6, 7, 8, 9, 10]
         self.assertTrue(all(self.graph.twin_halfedge((b, btag)) == (h, htag) for b, h in
-                            zip(range(self.graph.num_boundary), halfedge_id)))
+                            zip(range(self.graph.next_boundary_index), halfedge_id)))
 
     def test_vertex_degree(self):
         vertex_degree = [2, 2, 3, 2, 2, 2, 2, 3, 2, 2]
