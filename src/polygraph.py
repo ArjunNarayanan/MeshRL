@@ -291,6 +291,13 @@ class PolyGraph(nx.DiGraph):
         self.remove_edge(halfedge, next_halfedge)
         self.remove_edge(next_halfedge, halfedge)
 
+    def is_valid_edge_insert(self, hidx, k):
+        face_idx = self.face(hidx)
+        if 1 <= k <= self.face_degree(face_idx) - 3:
+            return True
+        else:
+            return False
+
     def insert_edge(self, hidx, k):
         """insert an edge from source of `hidx` to target of halfedge that is k `next` steps away"""
         hidx = self._ensure_tag_form(hidx, self.halfedge_tag)

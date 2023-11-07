@@ -143,6 +143,19 @@ class TestInsertHalfedge(unittest.TestCase):
         self.assertEqual(len(face_degrees), num_faces)
         self.assertTrue(all(self.graph.face_degree(fidx) == fd for (fidx, fd) in zip(range(num_faces), face_degrees)))
 
+    def test_valid_edge_insert(self):
+        hidx = (2, self.graph.halfedge_tag)
+        with self.assertRaises(ValueError):
+            self.graph.insert_edge(hidx, 3)
+        self.assertFalse(self.graph.is_valid_edge_insert(hidx, 3))
+        self.assertTrue(self.graph.is_valid_edge_insert(hidx, 2))
+
+        hidx = (6, self.graph.halfedge_tag)
+        self.assertTrue(self.graph.is_valid_edge_insert(hidx, 1))
+        self.assertTrue(self.graph.is_valid_edge_insert(hidx, 2))
+        self.assertTrue(self.graph.is_valid_edge_insert(hidx, 3))
+        self.assertFalse(self.graph.is_valid_edge_insert(hidx, 4))
+
 
 if __name__ == "__main__":
     unittest.main()
