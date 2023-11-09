@@ -1,4 +1,4 @@
-from src.hex_env import HexEnv
+from envs.hex_env import HexEnv
 import unittest
 import numpy as np
 
