@@ -163,6 +163,28 @@ class TestHalfEdgeConnectivity(unittest.TestCase):
     def test_face_degree(self):
         self.assertTrue(all(self.graph.face_degree(fidx) == 6 for fidx in range(self.graph.number_of_faces())))
 
+    def test_face_halfedges(self):
+        halfedges = self.graph.face_halfedges(0)
+        halfedges.sort()
+        htag = self.graph.halfedge_tag
+        test_halfedges = [(idx, htag) for idx in range(6)]
+        self.assertTrue(all(he == te for he, te in zip(halfedges, test_halfedges)))
+
+        halfedges = self.graph.face_halfedges(1)
+        halfedges.sort()
+        test_halfedges = [(idx, htag) for idx in range(6, 12)]
+        self.assertTrue(all(he == te for he, te in zip(halfedges, test_halfedges)))
+
+    def test_face_loop(self):
+        face_loop = self.graph.generate_halfedge_face_loop(3)
+        htag = self.graph.halfedge_tag
+        test_loop = [(idx, htag) for idx in [3, 4, 5, 0, 1, 2]]
+        self.assertTrue(all(he == te for he, te in zip(face_loop, test_loop)))
+
+        face_loop = self.graph.generate_halfedge_face_loop(11)
+        test_loop = [(idx, htag) for idx in [11, 6, 7, 8, 9, 10]]
+        self.assertTrue(all(he == te for he, te in zip(face_loop, test_loop)))
+
 
 # graph = initialize_double_hex_graph()
 # graph._add_twin_edges()

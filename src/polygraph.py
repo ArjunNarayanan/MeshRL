@@ -5,7 +5,6 @@ import itertools
 class PolyGraph(nx.DiGraph):
     def __init__(self):
         super().__init__()
-
         self.next_halfedge_index = 0
         self.next_vertex_index = 0
         self.next_face_index = 0
@@ -232,6 +231,35 @@ class PolyGraph(nx.DiGraph):
             return face
         else:
             return face[0]
+
+    def face_halfedges(self, face_idx, tag=True):
+        """return all halfedges connected to a face"""
+        face_idx = self._ensure_tag_form(face_idx, self.face_tag)
+        halfedges = [h for f, h, data in self.edges(face_idx, data=True) if data.get("type") == "face"]
+        if tag:
+            return halfedges
+        else:
+            halfedges = [h[0] for h in halfedges]
+            return halfedges
+
+    def first_face_halfedge(self, face_idx, tag=True):
+        face_idx = self._ensure_tag_form(face_idx, self.face_tag)
+        halfedge = next(h for f, h, data in self.edges(face_idx, data=True) if data.get("type") == "face")
+        if tag:
+            return halfedge
+        else:
+            return halfedge[0]
+
+    def generate_halfedge_face_loop(self, halfedge_idx):
+        """generate list of halfedges in a face loop"""
+        halfedge_idx = self._ensure_tag_form(halfedge_idx, self.halfedge_tag)
+        loop = [halfedge_idx]
+        next_halfedge = self.next_halfedge(halfedge_idx)
+        while next_halfedge != halfedge_idx:
+            loop.append(next_halfedge)
+            next_halfedge = self.next_halfedge(next_halfedge)
+
+        return loop
 
     def halfedge_on_boundary(self, hidx):
         twin = self.twin_halfedge(hidx)
