@@ -1,8 +1,6 @@
 import unittest
-
 from envs.hex_env import HexEnv
-from src.dcel_convolution import DCELConvBlock
-# import unittest
+from src.dcel_convolution import DCELConvBlock, RecurrentConvolution
 import torch
 
 
@@ -11,13 +9,6 @@ def get_model_input_from_observation(obs):
     next_indices = torch.tensor(obs["next"])
     prev_indices = torch.tensor(obs["previous"])
     twin_indices = torch.tensor(obs["twin"])
-
-    # num_halfedge, num_features = features.shape
-    # cycle_boundary_index = num_halfedge
-    # twin_boundary_index = cycle_boundary_index + 1
-    # next_indices[next_indices < 0] = cycle_boundary_index
-    # prev_indices[prev_indices < 0] = cycle_boundary_index
-    # twin_indices[twin_indices < 0] = twin_boundary_index
 
     return features, next_indices, prev_indices, twin_indices
 
@@ -35,6 +26,19 @@ class TestDCELConv(unittest.TestCase):
         self.assertEqual((num_halfedges, num_features), (12, 10))
 
 
+class TestRecConv(unittest.TestCase):
+    def setUp(self):
+        self.env = HexEnv()
+        self.projector = torch.nn.Linear(4, 32)
+        self.conv = RecurrentConvolution(32, 5)
+
+    def test_conv(self):
+        obs, info = self.env.reset()
+        features, next_indices, prev_indices, twin_indices = get_model_input_from_observation(obs)
+        out = self.projector(features)
+        out = self.conv(out, next_indices, prev_indices, twin_indices)
+        num_halfedges, num_features = out.shape
+        self.assertEqual((num_halfedges, num_features), (12, 32))
 
 
 if __name__ == "__main__":
