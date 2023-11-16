@@ -64,9 +64,9 @@ class FeatureExtractor(BaseFeaturesExtractor):
 
     def forward(self, obs):
         features = obs["features"]
-        next_indices = obs["next"]
-        prev_indices = obs["previous"]
-        twin_indices = obs["twin"]
+        next_indices = obs["next"].round().long()
+        prev_indices = obs["previous"].round().long()
+        twin_indices = obs["twin"].round().long()
         if features.ndim == 3:
             return self._forward_batch(features, next_indices, prev_indices, twin_indices)
         elif features.ndim == 2:

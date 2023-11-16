@@ -202,9 +202,9 @@ class TestInsertHalfedge(unittest.TestCase):
 
     def test_assert_add_new_edge(self):
         for hidx in range(self.graph.number_of_halfedges()):
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 self.graph.insert_edge(hidx, 1)
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 self.graph.insert_edge(hidx, 0)
 
     def test_vertex_degree(self):

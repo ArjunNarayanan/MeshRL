@@ -145,7 +145,7 @@ class TestInsertHalfedge(unittest.TestCase):
 
     def test_valid_edge_insert(self):
         hidx = (2, self.graph.halfedge_tag)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AssertionError):
             self.graph.insert_edge(hidx, 3)
         self.assertFalse(self.graph.is_valid_edge_insert(hidx, 3))
         self.assertTrue(self.graph.is_valid_edge_insert(hidx, 2))

@@ -64,20 +64,36 @@ class CustomActorCriticPolicy(ActorCriticPolicy):
         action_logits = action_logits.reshape(batch_size, -1)  # [batch_size, num_actions_per_sample]
         return self.action_dist.proba_distribution(action_logits=action_logits)
 
+    @staticmethod
+    def _reduce_latent_vf(latent_vf):
+        return latent_vf.mean(dim=-2)
+
     def predict_values(self, obs):
         features = self.features_extractor(obs)
         latent_vf = self.mlp_extractor.forward_critic(features)
-        latent_vf = latent_vf.mean(dim=1)
+        latent_vf = self._reduce_latent_vf(latent_vf)
         values = self.value_net(latent_vf)
         return values
 
+    def evaluate_actions(self, obs, actions):
+        features = self.features_extractor(obs)
+        latent_pi, latent_vf = self.mlp_extractor(features)
+        distribution = self._get_action_dist_from_latent(latent_pi)
+        log_prob = distribution.log_prob(actions)
+
+        latent_vf = self._reduce_latent_vf(latent_vf)
+        values = self.value_net(latent_vf)
+        entropy = distribution.entropy()
+        return values, log_prob, entropy
+
     def forward(self, obs, deterministic=False):
         features = self.features_extractor(obs)
-        # check that we are working with batched data
 
         latent_pi, latent_vf = self.mlp_extractor(features)
-        latent_vf = latent_vf.mean(dim=1)
+
+        latent_vf = self._reduce_latent_vf(latent_vf)
         values = self.value_net(latent_vf)
+
         distribution = self._get_action_dist_from_latent(latent_pi)
         actions = distribution.get_actions(deterministic=deterministic)
         log_prob = distribution.log_prob(actions)

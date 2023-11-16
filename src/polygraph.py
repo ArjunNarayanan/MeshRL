@@ -15,8 +15,10 @@ class PolyGraph(nx.DiGraph):
         self.face_tag = "f"
         self.boundary_tag = "b"
 
+        self.vertex_coordinates = None
+
     @classmethod
-    def from_face_loops(cls, face_loops):
+    def from_face_loops(cls, face_loops, vertex_coordinates=None):
         graph = cls()
 
         num_faces = len(face_loops)
@@ -24,6 +26,11 @@ class PolyGraph(nx.DiGraph):
         vertex_ids = set(itertools.chain.from_iterable(face_loops))
         num_vertices = len(vertex_ids)
 
+        if vertex_coordinates is not None:
+            assert all(
+                v in vertex_coordinates for v in vertex_ids), "Some vertices were not found in vertex_coordinates"
+
+        graph.vertex_coordinates = vertex_coordinates
         graph.next_halfedge_index = num_halfedges
         graph.next_vertex_index = num_vertices
         graph.next_face_index = num_faces
@@ -129,6 +136,15 @@ class PolyGraph(nx.DiGraph):
             # assert idx[1] == tag
             return idx
 
+    @staticmethod
+    def _ensure_untagged_form(idx):
+        if isinstance(idx, int):
+            return idx
+        else:
+            assert isinstance(idx, tuple)
+            assert len(idx) == 2
+            return idx[0]
+
     def _add_twin_edges(self):
         halfedge_nodes = [(h, self.halfedge_tag) for h in range(self.next_halfedge_index)]
         src_target = [(self.source_vertex(h), self.target_vertex(h)) for h in halfedge_nodes]
@@ -169,6 +185,9 @@ class PolyGraph(nx.DiGraph):
     def _number_of_nodes(self, type):
         return sum(1 for vert, data in self.nodes(data=True) if data.get("type") == type)
 
+    def _number_of_edges(self, type):
+        return sum(1 for src, dst, data in self.edges(data=True) if data.get("type") == type)
+
     def number_of_vertices(self):
         return self._number_of_nodes("vertex")
 
@@ -177,6 +196,10 @@ class PolyGraph(nx.DiGraph):
 
     def number_of_faces(self):
         return self._number_of_nodes("face")
+
+    def vertex_coordinate(self, vertex_idx):
+        vertex_idx = self._ensure_untagged_form(vertex_idx)
+        return self.vertex_coordinates[vertex_idx]
 
     def source_vertex(self, halfedge_index, tag=True):
         halfedge_index = self._ensure_tag_form(halfedge_index, self.halfedge_tag)
@@ -265,6 +288,10 @@ class PolyGraph(nx.DiGraph):
         twin = self.twin_halfedge(hidx)
         return self.nodes[twin]["type"] == "boundary"
 
+    def is_halfedge(self, hidx):
+        hidx = self._ensure_tag_form(hidx, self.halfedge_tag)
+        return self.nodes[hidx].get("type") == "halfedge"
+
     def vertex_degree(self, vertex_index):
         vertex_index = self._ensure_tag_form(vertex_index, self.vertex_tag)
         d = self.in_degree(vertex_index) // 2
@@ -304,9 +331,12 @@ class PolyGraph(nx.DiGraph):
         self.next_boundary_index += 1
         return boundary_edge
 
-    def create_vertex(self):
+    def create_vertex(self, coord=None):
         new_vertex_idx = (self.next_vertex_index, self.vertex_tag)
         self.add_node(new_vertex_idx, type="vertex")
+        if coord is not None and self.vertex_coordinates is not None:
+            # assert len(coord) == 2
+            self.vertex_coordinates[self.next_vertex_index] = coord
         self.next_vertex_index += 1
         return new_vertex_idx
 
@@ -319,7 +349,15 @@ class PolyGraph(nx.DiGraph):
         self.remove_edge(halfedge, next_halfedge)
         self.remove_edge(next_halfedge, halfedge)
 
+    def disassociate_previous_halfedge(self, halfedge):
+        prev_halfedge = self.previous_halfedge(halfedge)
+        self.remove_edge(halfedge, prev_halfedge)
+        self.remove_edge(prev_halfedge, halfedge)
+
     def is_valid_edge_insert(self, hidx, k):
+        if not self.is_halfedge(hidx):
+            return False
+
         face_idx = self.face(hidx)
         if 1 <= k <= self.face_degree(face_idx) - 3:
             return True
@@ -328,10 +366,9 @@ class PolyGraph(nx.DiGraph):
 
     def insert_edge(self, hidx, k):
         """insert an edge from source of `hidx` to target of halfedge that is k `next` steps away"""
+        assert self.is_valid_edge_insert(hidx, k), "Invalid edge insert encountered"
         hidx = self._ensure_tag_form(hidx, self.halfedge_tag)
         face_idx = self.face(hidx)
-        if not 1 <= k <= self.face_degree(face_idx) - 3:
-            raise ValueError("Expected 1 <= k <= faceDegree - 3, got k = ", k)
 
         new_face_idx = self.create_face()
         # remove edges to current face and add edge to new face
@@ -371,10 +408,26 @@ class PolyGraph(nx.DiGraph):
         self.add_undirected_edge(hidx, vidx, "target")
         self.add_undirected_edge(twin_edge, vidx, "source")
 
+    def get_new_vertex_coordinate(self, next_vertex, previous_vertex):
+        if self.vertex_coordinates is not None:
+            coord1 = self.vertex_coordinate(next_vertex)
+            coord2 = self.vertex_coordinate(previous_vertex)
+            new_coord = [(c1 + c2) / 2 for c1, c2 in zip(coord1, coord2)]
+            return new_coord
+        else:
+            return None
+
     def _insert_boundary_vertex(self, hidx):
+        hidx = self._ensure_tag_form(hidx, self.halfedge_tag)
+        assert self.is_halfedge(hidx)
         assert self.halfedge_on_boundary(hidx)
-        new_vertex_idx = self.create_vertex()
+
         current_target_vertex = self.target_vertex(hidx)
+        current_source_vertex = self.source_vertex(hidx)
+
+        new_vertex_coord = self.get_new_vertex_coordinate(current_target_vertex, current_source_vertex)
+        new_vertex_idx = self.create_vertex(new_vertex_coord)
+
         next_halfedge = self.next_halfedge(hidx)
         self.disassociate_next_halfedge(hidx)
 
@@ -383,3 +436,26 @@ class PolyGraph(nx.DiGraph):
         new_halfedge = self.create_halfedge(next_halfedge, hidx)
         new_boundary_edge = self.create_boundary_halfedge(new_vertex_idx, current_target_vertex)
         self.add_undirected_edge(new_halfedge, new_boundary_edge, "twin")
+
+    def _insert_interior_vertex(self, hidx):
+        hidx = self._ensure_tag_form(hidx, self.halfedge_tag)
+        assert self.is_halfedge(hidx)
+        assert not self.halfedge_on_boundary(hidx)
+
+        next_hidx = self.next_halfedge(hidx)
+        twin_hidx = self.twin_halfedge(hidx)
+        twin_prev_hidx = self.previous_halfedge(twin_hidx)
+
+        current_target_vertex = self.target_vertex(hidx)
+        current_source_vertex = self.source_vertex(hidx)
+        new_vertex_coord = self.get_new_vertex_coordinate(current_target_vertex, current_source_vertex)
+        new_vertex_idx = self.create_vertex(new_vertex_coord)
+
+        self.disassociate_next_halfedge(hidx)
+        self.disassociate_previous_halfedge(twin_hidx)
+
+        self.set_target_vertex(hidx, new_vertex_idx)
+
+        new_next_hidx = self.create_halfedge(next_hidx, hidx)
+        new_twin_prev_hidx = self.create_halfedge(twin_hidx, twin_prev_hidx)
+        self.add_undirected_edge(new_next_hidx, new_twin_prev_hidx, "twin")
