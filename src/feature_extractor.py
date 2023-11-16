@@ -61,3 +61,15 @@ class FeatureExtractor(BaseFeaturesExtractor):
         extracted_features = extracted_features.reshape(batch_size, -1, self.output_features)
 
         return extracted_features
+
+    def forward(self, obs):
+        features = obs["features"]
+        next_indices = obs["next"]
+        prev_indices = obs["previous"]
+        twin_indices = obs["twin"]
+        if features.ndim == 3:
+            return self._forward_batch(features, next_indices, prev_indices, twin_indices)
+        elif features.ndim == 2:
+            return self._forward_sample(features, next_indices, prev_indices, twin_indices)
+        else:
+            raise ValueError("Expected features.ndim == 2 or 3, got ", features.ndim)

@@ -31,7 +31,9 @@ class HexEnv(gym.Env):
         self.index_to_halfedge = self._get_index_to_halfedge()
         self.halfedge_to_index = self._get_halfedge_to_index(self.index_to_halfedge)
 
-        self.action_space = Discrete(self.max_num_halfedges * self.num_actions_per_halfedge)
+        # self.action_space = Discrete(self.max_num_halfedges * self.num_actions_per_halfedge)
+        self.action_space = Discrete(self.num_actions_per_halfedge)
+
         self.observation_space = Dict(
             {
                 "features": Box(low=0, high=2, shape=(self.max_num_halfedges, 4)),
