@@ -16,6 +16,7 @@ class PolyGraph(nx.DiGraph):
         self.boundary_tag = "b"
 
         self.vertex_coordinates = None
+        self.user_defined_vertices = set()
 
     @classmethod
     def from_face_loops(cls, face_loops, vertex_coordinates=None):
@@ -31,6 +32,7 @@ class PolyGraph(nx.DiGraph):
                 v in vertex_coordinates for v in vertex_ids), "Some vertices were not found in vertex_coordinates"
 
         graph.vertex_coordinates = vertex_coordinates
+        graph.user_defined_vertices = vertex_ids
         graph.next_halfedge_index = num_halfedges
         graph.next_vertex_index = num_vertices
         graph.next_face_index = num_faces
@@ -292,6 +294,10 @@ class PolyGraph(nx.DiGraph):
         hidx = self._ensure_tag_form(hidx, self.halfedge_tag)
         return self.nodes[hidx].get("type") == "halfedge"
 
+    def is_user_defined_vertex(self, vidx):
+        vidx = self._ensure_untagged_form(vidx)
+        return vidx in self.user_defined_vertices
+
     def vertex_degree(self, vertex_index):
         vertex_index = self._ensure_tag_form(vertex_index, self.vertex_tag)
         d = self.in_degree(vertex_index) // 2
@@ -467,3 +473,100 @@ class PolyGraph(nx.DiGraph):
             self._insert_boundary_vertex(hidx)
         else:
             self._insert_interior_vertex(hidx)
+
+    def _delete_vertex_coordinates(self, vidx):
+        vidx = self._ensure_untagged_form(vidx)
+        if self.vertex_coordinates is not None:
+            coords = self.vertex_coordinates.pop(vidx, None)
+            if coords is None:
+                print("Warning: deleted vertex not found in vertex coordinates")
+
+    def _delete_halfedge(self, hidx):
+        hidx = self._ensure_tag_form(hidx, self.halfedge_tag)
+        twin = self.twin_halfedge(hidx)
+        self.remove_node(hidx)
+        self.remove_node(twin)
+
+    def _delete_vertex(self, vidx):
+        vidx = self._ensure_tag_form(vidx, self.vertex_tag)
+        self.remove_node(vidx)
+        self._delete_vertex_coordinates(vidx)
+
+    def _delete_boundary_vertex(self, hidx):
+        """deletes vertex at source of hidx"""
+        hidx = self._ensure_tag_form(hidx, self.halfedge_tag)
+        assert self.halfedge_on_boundary(hidx)
+        source_vertex = self.source_vertex(hidx)
+        assert self.vertex_degree(source_vertex) == 2
+        assert not self.is_user_defined_vertex(source_vertex)
+
+        next_halfedge = self.next_halfedge(hidx)
+        prev_halfedge = self.previous_halfedge(hidx)
+
+        target_vertex = self.target_vertex(hidx)
+        self.set_target_vertex(prev_halfedge, target_vertex)
+        self.associate_previous_next(prev_halfedge, next_halfedge)
+
+        self._delete_halfedge(hidx)
+        self._delete_vertex(source_vertex)
+
+    def _delete_interior_vertex(self, hidx):
+        hidx = self._ensure_tag_form(hidx, self.halfedge_tag)
+        assert not self.halfedge_on_boundary(hidx)
+        source_vertex = self.source_vertex(hidx)
+        assert self.vertex_degree(source_vertex) == 2
+
+        next_halfedge = self.next_halfedge(hidx)
+        prev_halfedge = self.previous_halfedge(hidx)
+        twin_halfedge = self.twin_halfedge(hidx)
+
+        next_twin_halfedge = self.next_halfedge(twin_halfedge)
+        prev_twin_halfedge = self.previous_halfedge(twin_halfedge)
+
+        target_vertex = self.target_vertex(hidx)
+        self.set_target_vertex(prev_halfedge, target_vertex)
+        self.associate_previous_next(prev_halfedge, next_halfedge)
+        self.associate_previous_next(prev_twin_halfedge, next_twin_halfedge)
+
+        self._delete_halfedge(hidx)
+        self._delete_vertex(source_vertex)
+
+    def is_valid_delete_halfedge(self, hidx):
+        if not self.is_halfedge(hidx):
+            return False
+
+        if self.halfedge_on_boundary(hidx):
+            return False
+
+        source_vertex = self.source_vertex(hidx)
+        target_vertex = self.target_vertex(hidx)
+        if self.vertex_degree(source_vertex) <= 2 or self.vertex_degree(target_vertex) <= 2:
+            return False
+
+        return True
+
+    def _halfedges_of_face(self, fidx):
+        fidx = self._ensure_tag_form(fidx, self.face_tag)
+        edges = (target for src, target, data in self.edges(fidx, data=True) if data.get("type") == "face")
+        return edges
+
+    def delete_halfedge(self, hidx):
+        assert self.is_valid_delete_halfedge(hidx)
+
+        next_edge = self.next_halfedge(hidx)
+        prev_edge = self.previous_halfedge(hidx)
+        twin_edge = self.twin_halfedge(hidx)
+        prev_twin = self.previous_halfedge(twin_edge)
+        next_twin = self.next_halfedge(twin_edge)
+
+        current_face = self.face(hidx)
+        twin_face = self.face(twin_edge)
+        # Associate all edges from neighboring face with current face and delete neighboring face
+        twin_face_edges = self._halfedges_of_face(twin_face)
+        for halfedge in twin_face_edges:
+            self.add_undirected_edge(halfedge, current_face, "face")
+        self.remove_node(twin_face)
+
+        self.associate_previous_next(prev_edge, next_twin)
+        self.associate_previous_next(prev_twin, next_edge)
+        self._delete_halfedge(hidx)

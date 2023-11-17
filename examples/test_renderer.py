@@ -1,4 +1,4 @@
-from envs.hex_env import HexEnv
+from src.polygraph import PolyGraph
 from src.render import Renderer
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,19 +17,25 @@ def generate_coordinates():
     return coords
 
 
-env = HexEnv()
 coords = generate_coordinates()
-renderer = Renderer(env.graph, coords)
+graph = PolyGraph.from_face_loops([[0, 1, 2, 3, 4, 5]], vertex_coordinates=coords)
+renderer = Renderer(graph, graph.vertex_coordinates)
 renderer.plot()
-# halfedge = env.graph.first_face_halfedge(0)
-# face_loop = env.graph.generate_halfedge_face_loop(halfedge)
-# face_vertices = [env.graph.source_vertex(hidx, tag=False) for hidx in face_loop]
-#
-# face_coords = [coords[v] for v in face_vertices]
-# x = [c[0] for c in face_coords]
-# y = [c[1] for c in face_coords]
-#
-# fig, ax = plt.subplots()
-# ax.axis("equal")
-# ax.axis("off")
-# ax.fill(x, y, facecolor="lightgray", edgecolor="black", linewidth=2)
+
+graph.insert_edge(0, 2)
+renderer.plot()
+
+graph.insert_vertex(7)
+renderer.plot()
+
+graph.insert_edge(8, 1)
+renderer.plot()
+
+graph.insert_edge(5, 1)
+renderer.plot()
+
+graph.insert_edge(6, 1)
+renderer.plot()
+
+graph.insert_edge(15, 1)
+renderer.plot()
