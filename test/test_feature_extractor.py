@@ -70,3 +70,7 @@ class TestFeatureExtractor(unittest.TestCase):
         self.assertEqual(batch_size, self.batch_size)
         self.assertEqual(sample_size, 12)
         self.assertEqual(feature_size, self.output_features)
+
+
+if __name__ == "__main__":
+    unittest.main()

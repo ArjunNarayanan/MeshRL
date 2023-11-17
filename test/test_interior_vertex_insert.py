@@ -38,12 +38,12 @@ class TestInsertVertex(unittest.TestCase):
         self.assertEqual(new_coord, [0, 0])
 
     def test_number_of_edges(self):
-        self.assertEqual(self.graph._number_of_edges("next"), 8)
-        self.assertEqual(self.graph._number_of_edges("previous"), 8)
-        self.assertEqual(self.graph._number_of_edges("twin"), 12)
-        self.assertEqual(self.graph._number_of_edges("source"), 24)
-        self.assertEqual(self.graph._number_of_edges("target"), 24)
-        self.assertEqual(self.graph._number_of_edges("face"), 16)
+        self.assertEqual(self.graph.number_of_edges_of_type("next"), 8)
+        self.assertEqual(self.graph.number_of_edges_of_type("previous"), 8)
+        self.assertEqual(self.graph.number_of_edges_of_type("twin"), 12)
+        self.assertEqual(self.graph.number_of_edges_of_type("source"), 24)
+        self.assertEqual(self.graph.number_of_edges_of_type("target"), 24)
+        self.assertEqual(self.graph.number_of_edges_of_type("face"), 16)
 
         self.assertEqual(self.graph.number_of_edges(), 92)
 
@@ -154,3 +154,7 @@ class TestInsertVertex(unittest.TestCase):
 
     def test_face_degree(self):
         self.assertTrue(all(self.graph.face_degree(idx) == 4 for idx in range(2)))
+
+
+if __name__ == "__main__":
+    unittest.main()

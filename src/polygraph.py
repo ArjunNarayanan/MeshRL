@@ -185,7 +185,7 @@ class PolyGraph(nx.DiGraph):
     def _number_of_nodes(self, type):
         return sum(1 for vert, data in self.nodes(data=True) if data.get("type") == type)
 
-    def _number_of_edges(self, type):
+    def number_of_edges_of_type(self, type=None):
         return sum(1 for src, dst, data in self.edges(data=True) if data.get("type") == type)
 
     def number_of_vertices(self):
@@ -459,3 +459,11 @@ class PolyGraph(nx.DiGraph):
         new_next_hidx = self.create_halfedge(next_hidx, hidx)
         new_twin_prev_hidx = self.create_halfedge(twin_hidx, twin_prev_hidx)
         self.add_undirected_edge(new_next_hidx, new_twin_prev_hidx, "twin")
+
+    def insert_vertex(self, hidx):
+        hidx = self._ensure_tag_form(hidx, self.halfedge_tag)
+        assert self.is_halfedge(hidx)
+        if self.halfedge_on_boundary(hidx):
+            self._insert_boundary_vertex(hidx)
+        else:
+            self._insert_interior_vertex(hidx)
