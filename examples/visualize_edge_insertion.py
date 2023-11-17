@@ -9,9 +9,9 @@ def initialize_hex_graph():
     ]
 
     graph = PolyGraph(face_loops)
-    graph.insert_edge(0, 2)
-    graph.insert_edge(1, 1)
-    graph.insert_edge(4, 1)
+    graph.insert_halfedge(0, 2)
+    graph.insert_halfedge(1, 1)
+    graph.insert_halfedge(4, 1)
 
     return graph
 

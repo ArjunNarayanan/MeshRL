@@ -16,7 +16,7 @@ def initialize_double_hex_graph():
 class TestActions(unittest.TestCase):
     def setUp(self):
         self.graph = initialize_double_hex_graph()
-        self.graph.insert_edge(11, 2)
+        self.graph.insert_halfedge(11, 2)
         self.graph.insert_vertex(12)
         self.graph.insert_vertex(4)
 

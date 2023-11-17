@@ -153,7 +153,7 @@ class HexEnv(gym.Env):
         if self.is_valid_action(halfedge_idx, num_edge_insert_steps):
             prev_score = self.score
             hidx = self.index_to_halfedge[halfedge_idx]
-            self.graph.insert_edge(hidx, num_edge_insert_steps)
+            self.graph.insert_halfedge(hidx, num_edge_insert_steps)
             self.index_to_halfedge = self._get_index_to_halfedge()
             self.halfedge_to_index = self._get_halfedge_to_index(self.index_to_halfedge)
 

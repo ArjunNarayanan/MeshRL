@@ -8,9 +8,9 @@ def initialize_hex_graph():
     ]
 
     graph = PolyGraph.from_face_loops(face_loops)
-    graph.insert_edge(0, 2)
-    graph.insert_edge(1, 1)
-    graph.insert_edge(4, 1)
+    graph.insert_halfedge(0, 2)
+    graph.insert_halfedge(1, 1)
+    graph.insert_halfedge(4, 1)
 
     return graph
 
@@ -203,9 +203,9 @@ class TestInsertHalfedge(unittest.TestCase):
     def test_assert_add_new_edge(self):
         for hidx in range(self.graph.number_of_halfedges()):
             with self.assertRaises(AssertionError):
-                self.graph.insert_edge(hidx, 1)
+                self.graph.insert_halfedge(hidx, 1)
             with self.assertRaises(AssertionError):
-                self.graph.insert_edge(hidx, 0)
+                self.graph.insert_halfedge(hidx, 0)
 
     def test_vertex_degree(self):
         vertex_degree = [4, 3, 2, 4, 3, 2]

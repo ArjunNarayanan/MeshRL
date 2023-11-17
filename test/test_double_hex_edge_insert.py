@@ -9,7 +9,7 @@ def initialize_double_hex_graph():
     ]
 
     graph = PolyGraph.from_face_loops(face_loops)
-    graph.insert_edge(0, 1)
+    graph.insert_halfedge(0, 1)
 
     return graph
 

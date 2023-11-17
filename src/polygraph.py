@@ -370,7 +370,7 @@ class PolyGraph(nx.DiGraph):
         else:
             return False
 
-    def insert_edge(self, hidx, k):
+    def insert_halfedge(self, hidx, k):
         """insert an edge from source of `hidx` to target of halfedge that is k `next` steps away"""
         assert self.is_valid_edge_insert(hidx, k), "Invalid edge insert encountered"
         hidx = self._ensure_tag_form(hidx, self.halfedge_tag)
@@ -511,6 +511,7 @@ class PolyGraph(nx.DiGraph):
         self._delete_vertex(source_vertex)
 
     def _delete_interior_vertex(self, hidx):
+        """deletes vertex at source of hidx"""
         hidx = self._ensure_tag_form(hidx, self.halfedge_tag)
         assert not self.halfedge_on_boundary(hidx)
         source_vertex = self.source_vertex(hidx)
@@ -530,6 +531,32 @@ class PolyGraph(nx.DiGraph):
 
         self._delete_halfedge(hidx)
         self._delete_vertex(source_vertex)
+
+    def is_valid_delete_source_vertex(self, hidx):
+        """Check if vertex at source of hidx can be deleted"""
+        if not self.is_halfedge(hidx):
+            return False
+
+        if self.halfedge_on_boundary(hidx):
+            vidx = self.source_vertex(hidx)
+            if self.is_user_defined_vertex(vidx):
+                return False
+            if self.vertex_degree(vidx) > 2:
+                return False
+            return True
+        else:
+            vidx = self.source_vertex(hidx)
+            if self.vertex_degree(vidx) > 2:
+                return False
+            else:
+                return True
+
+    def delete_source_vertex(self, hidx):
+        assert self.is_valid_delete_source_vertex(hidx), "cannot delete vertex at source of : " + str(hidx)
+        if self.halfedge_on_boundary(hidx):
+            self._delete_boundary_vertex(hidx)
+        else:
+            self._delete_interior_vertex(hidx)
 
     def is_valid_delete_halfedge(self, hidx):
         if not self.is_halfedge(hidx):
