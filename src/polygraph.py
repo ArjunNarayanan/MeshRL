@@ -1,5 +1,6 @@
 import networkx as nx
 import itertools
+from collections import deque
 
 
 class PolyGraph(nx.DiGraph):
@@ -396,6 +397,8 @@ class PolyGraph(nx.DiGraph):
         old_face_new_halfedge = self.create_halfedge(old_face_next_halfedge, old_face_prev_halfedge)
         self.add_undirected_edge(new_face_new_halfedge, old_face_new_halfedge, "twin")
 
+        return new_face_idx
+
     def set_target_vertex(self, hidx, vidx):
         """
         delete edges between hidx and its current target vertex
@@ -443,6 +446,8 @@ class PolyGraph(nx.DiGraph):
         new_boundary_edge = self.create_boundary_halfedge(new_vertex_idx, current_target_vertex)
         self.add_undirected_edge(new_halfedge, new_boundary_edge, "twin")
 
+        return new_vertex_idx
+
     def _insert_interior_vertex(self, hidx):
         hidx = self._ensure_tag_form(hidx, self.halfedge_tag)
         assert self.is_halfedge(hidx)
@@ -466,13 +471,15 @@ class PolyGraph(nx.DiGraph):
         new_twin_prev_hidx = self.create_halfedge(twin_hidx, twin_prev_hidx)
         self.add_undirected_edge(new_next_hidx, new_twin_prev_hidx, "twin")
 
+        return new_vertex_idx
+
     def insert_vertex(self, hidx):
         hidx = self._ensure_tag_form(hidx, self.halfedge_tag)
         assert self.is_halfedge(hidx)
         if self.halfedge_on_boundary(hidx):
-            self._insert_boundary_vertex(hidx)
+            return self._insert_boundary_vertex(hidx)
         else:
-            self._insert_interior_vertex(hidx)
+            return self._insert_interior_vertex(hidx)
 
     def _delete_vertex_coordinates(self, vidx):
         vidx = self._ensure_untagged_form(vidx)
@@ -597,3 +604,41 @@ class PolyGraph(nx.DiGraph):
         self.associate_previous_next(prev_edge, next_twin)
         self.associate_previous_next(prev_twin, next_edge)
         self._delete_halfedge(hidx)
+
+        # return the deleted face
+        return twin_face
+
+    def knn_halfedges(self, hidx, k):
+        hidx = self._ensure_tag_form(hidx, self.halfedge_tag)
+        assert self.is_halfedge(hidx)
+        assert k >= 1
+
+        seen = set()
+        queue = deque()
+
+        seen.add(hidx)
+        queue.append(hidx)
+        neighbors = []
+
+        def append_if_not_seen(edge):
+            if edge not in seen:
+                seen.add(edge)
+                queue.append(edge)
+
+        while queue:
+            edge = queue.popleft()
+            neighbors.append(edge)
+            if len(neighbors) >= k:
+                return neighbors
+
+            next_edge = self.next_halfedge(edge)
+            append_if_not_seen(next_edge)
+
+            prev_edge = self.previous_halfedge(edge)
+            append_if_not_seen(prev_edge)
+
+            if not self.halfedge_on_boundary(edge):
+                twin_edge = self.twin_halfedge(edge)
+                append_if_not_seen(twin_edge)
+
+        return neighbors

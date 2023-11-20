@@ -17,8 +17,12 @@ class TestActions(unittest.TestCase):
     def setUp(self):
         self.graph = initialize_double_hex_graph()
         self.graph.insert_halfedge(11, 2)
-        self.graph.insert_vertex(12)
-        self.graph.insert_vertex(4)
+        self.vidx1 = self.graph.insert_vertex(12)
+        self.vidx2 = self.graph.insert_vertex(4)
+
+    def test_inserted_vertex_id(self):
+        self.assertEqual(self.vidx1, (10, self.graph.vertex_tag))
+        self.assertEqual(self.vidx2, (11, self.graph.vertex_tag))
 
     def test_number_of_nodes(self):
         self.assertEqual(self.graph.number_of_vertices(), 12)

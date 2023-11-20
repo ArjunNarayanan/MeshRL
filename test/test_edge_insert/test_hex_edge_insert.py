@@ -8,9 +8,6 @@ def initialize_hex_graph():
     ]
 
     graph = PolyGraph.from_face_loops(face_loops)
-    graph.insert_halfedge(0, 2)
-    graph.insert_halfedge(1, 1)
-    graph.insert_halfedge(4, 1)
 
     return graph
 
@@ -18,6 +15,15 @@ def initialize_hex_graph():
 class TestInsertHalfedge(unittest.TestCase):
     def setUp(self) -> None:
         self.graph = initialize_hex_graph()
+        self.face1 = self.graph.insert_halfedge(0, 2)
+        self.face2 = self.graph.insert_halfedge(1, 1)
+        self.face3 = self.graph.insert_halfedge(4, 1)
+
+    def test_new_face_idx(self):
+        ftag = self.graph.face_tag
+        self.assertEqual(self.face1, (1, ftag))
+        self.assertEqual(self.face2, (2, ftag))
+        self.assertEqual(self.face3, (3, ftag))
 
     def test_num_graph_nodes(self):
         num_halfedge = self.graph.number_of_halfedges()

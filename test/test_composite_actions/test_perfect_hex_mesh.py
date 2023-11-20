@@ -30,12 +30,22 @@ class TestDeleteEdge(unittest.TestCase):
         self.graph = initialize_graph()
         self.hidx = range(18)
 
-        self.graph.insert_halfedge(0, 2)
-        self.graph.insert_vertex(7)
-        self.graph.insert_halfedge(8, 1)
-        self.graph.insert_halfedge(5, 1)
-        self.graph.insert_halfedge(6, 1)
-        self.graph.insert_halfedge(15, 1)
+        self.inserted_face1 = self.graph.insert_halfedge(0, 2)
+        self.inserted_vertex1 = self.graph.insert_vertex(7)
+        self.inserted_face2 = self.graph.insert_halfedge(8, 1)
+        self.inserted_face3 = self.graph.insert_halfedge(5, 1)
+        self.inserted_face4 = self.graph.insert_halfedge(6, 1)
+        self.inserted_face5 = self.graph.insert_halfedge(15, 1)
+
+    def test_new_indices(self):
+        ftag = self.graph.face_tag
+        vtag = self.graph.vertex_tag
+        self.assertEqual(self.inserted_face1, (1, ftag))
+        self.assertEqual(self.inserted_vertex1, (6, vtag))
+        self.assertEqual(self.inserted_face2, (2, ftag))
+        self.assertEqual(self.inserted_face3, (3, ftag))
+        self.assertEqual(self.inserted_face4, (4, ftag))
+        self.assertEqual(self.inserted_face5, (5, ftag))
 
     def test_number_of_nodes(self):
         self.assertEqual(self.graph.number_of_vertices(), 7)

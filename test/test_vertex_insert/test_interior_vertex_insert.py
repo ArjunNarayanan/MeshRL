@@ -24,7 +24,10 @@ def generate_coordinates():
 class TestInsertVertex(unittest.TestCase):
     def setUp(self) -> None:
         self.graph = initialize_triangle_graph()
-        self.graph._insert_interior_vertex(1)
+        self.vidx = self.graph._insert_interior_vertex(1)
+
+    def test_inserted_vertex_id(self):
+        self.assertEqual(self.vidx, (4, self.graph.vertex_tag))
 
     def test_number_of_nodes(self):
         self.assertEqual(self.graph.number_of_vertices(), 5)
