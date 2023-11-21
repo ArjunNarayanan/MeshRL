@@ -22,20 +22,20 @@ graph = PolyGraph.from_face_loops([[0, 1, 2, 3, 4, 5]], vertex_coordinates=coord
 renderer = Renderer(graph, graph.vertex_coordinates)
 renderer.plot()
 
-graph.insert_halfedge(0, 2)
+graph.insert_halfedge(5, 1)
 renderer.plot()
 
 graph.insert_vertex(7)
 renderer.plot()
 
-graph.insert_halfedge(8, 1)
-renderer.plot()
-
-graph.insert_halfedge(5, 1)
-renderer.plot()
-
 graph.insert_halfedge(6, 1)
 renderer.plot()
 
-graph.insert_halfedge(15, 1)
+graph.insert_halfedge(2, 3)
+renderer.plot()
+
+graph.insert_halfedge(12, 2)
+renderer.plot()
+
+graph.insert_halfedge(3, 1)
 renderer.plot()

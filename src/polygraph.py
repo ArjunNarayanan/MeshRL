@@ -293,7 +293,22 @@ class PolyGraph(nx.DiGraph):
 
     def is_halfedge(self, hidx):
         hidx = self._ensure_tag_form(hidx, self.halfedge_tag)
-        return self.nodes[hidx].get("type") == "halfedge"
+        return self.has_node(hidx) and self.nodes[hidx].get("type") == "halfedge"
+
+    def _node_list_by_type(self, node_type, tag):
+        nodes = [node for node, data in self.nodes(data=True) if data.get("type") == node_type]
+        if not tag:
+            nodes = [self._ensure_untagged_form(idx) for idx in nodes]
+        return nodes
+
+    def halfedge_list(self, tag=True):
+        return self._node_list_by_type("halfedge", tag)
+
+    def face_list(self, tag=True):
+        return self._node_list_by_type("face", tag)
+
+    def vertex_list(self, tag=True):
+        return self._node_list_by_type("vertex", tag)
 
     def is_user_defined_vertex(self, vidx):
         vidx = self._ensure_untagged_form(vidx)
@@ -473,13 +488,18 @@ class PolyGraph(nx.DiGraph):
 
         return new_vertex_idx
 
-    def insert_vertex(self, hidx):
+    def insert_vertex(self, hidx, tag=True):
         hidx = self._ensure_tag_form(hidx, self.halfedge_tag)
         assert self.is_halfedge(hidx)
         if self.halfedge_on_boundary(hidx):
-            return self._insert_boundary_vertex(hidx)
+            new_vertex = self._insert_boundary_vertex(hidx)
         else:
-            return self._insert_interior_vertex(hidx)
+            new_vertex = self._insert_interior_vertex(hidx)
+
+        if tag:
+            return new_vertex
+        else:
+            return self._ensure_untagged_form(new_vertex)
 
     def _delete_vertex_coordinates(self, vidx):
         vidx = self._ensure_untagged_form(vidx)
