@@ -239,14 +239,36 @@ class HexEnv(gym.Env):
     def _step_halfedge_action(self, hidx, action):
         assert 0 <= action < self.num_actions_per_halfedge
 
-        if action < self.max_edge_addition_steps:
-            self._step_insert_edge(hidx, action + 1)
-        elif action == self.max_edge_addition_steps:
-            self._step_delete_edge(hidx)
-        elif action == self.max_edge_addition_steps + 1:
-            self._step_insert_vertex(hidx)
-        else:  # delete vertex
-            self._step_delete_source_vertex(hidx)
+        if self.graph.is_halfedge(hidx):
+            if action < self.max_edge_addition_steps:
+                self._step_insert_edge(hidx, action + 1)
+            elif action == self.max_edge_addition_steps:
+                self._step_delete_edge(hidx)
+            elif action == self.max_edge_addition_steps + 1:
+                self._step_insert_vertex(hidx)
+            else:  # delete vertex
+                self._step_delete_source_vertex(hidx)
+        else:
+            self.reward = self.no_action_reward
+
+    def step(self, linear_action_index):
+        if self.num_actions >= self.max_actions:
+            print("WARNING : NUM ACTIONS > MAX ACTIONS!!") # this should not happen
+
+        halfedge_idx = linear_action_index // self.num_actions_per_halfedge
+        local_action_index = linear_action_index % self.num_actions_per_halfedge
+        self._step_halfedge_action(halfedge_idx, local_action_index)
+
+        self.num_actions += 1
+        terminated = self.is_terminated()
+
+        # TODO: implement function to construct observation
+
+    def is_terminated(self):
+        if self.num_actions >= self.max_actions or self.score == 0:
+            return True
+        else:
+            return False
 
 
 if __name__ == "__main__":
