@@ -126,3 +126,19 @@ class TestHexEnv(unittest.TestCase):
         self.assertEqual(self.env.reward, 3)
         self.assertEqual(self.env.global_score(), 0)
         self.assertEqual(self.env.score, 0)
+
+    def test_invalid_vertex_delete(self):
+        self.env._step_insert_edge(2, 2)
+        self.env._step_insert_vertex(6)
+        self.env._step_insert_edge(8, 2)
+        self.env._step_delete_edge(8)
+
+        self.assertFalse(self.env.graph.is_valid_delete_source_vertex(11))
+        self.assertFalse(self.env.graph.is_valid_delete_source_vertex(7))
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+
+

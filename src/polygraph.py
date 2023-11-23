@@ -575,6 +575,12 @@ class PolyGraph(nx.DiGraph):
         if self.face_degree(fidx) < 4:
             return False
 
+        if not self.halfedge_on_boundary(hidx):
+            twin_edge = self.twin_halfedge(hidx)
+            twin_face = self.face(twin_edge)
+            if self.face_degree(twin_face) < 4:
+                return False
+
         return True
 
         # if self.halfedge_on_boundary(hidx):
