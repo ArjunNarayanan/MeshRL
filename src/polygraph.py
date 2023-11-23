@@ -583,20 +583,6 @@ class PolyGraph(nx.DiGraph):
 
         return True
 
-        # if self.halfedge_on_boundary(hidx):
-        #     vidx = self.source_vertex(hidx)
-        #     if self.is_user_defined_vertex(vidx):
-        #         return False
-        #     if self.vertex_degree(vidx) > 2:
-        #         return False
-        #     return True
-        # else:
-        #     vidx = self.source_vertex(hidx)
-        #     if self.vertex_degree(vidx) > 2:
-        #         return False
-        #     else:
-        #         return True
-
     def delete_source_vertex(self, hidx):
         assert self.is_valid_delete_source_vertex(hidx), "cannot delete vertex at source of : " + str(hidx)
         if self.halfedge_on_boundary(hidx):

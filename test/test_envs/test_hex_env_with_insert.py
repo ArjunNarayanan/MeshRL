@@ -1,5 +1,6 @@
 from envs.hex_env_with_insert import HexEnv
 import unittest
+import numpy as np
 
 
 class TestHexEnv(unittest.TestCase):
@@ -135,6 +136,18 @@ class TestHexEnv(unittest.TestCase):
 
         self.assertFalse(self.env.graph.is_valid_delete_source_vertex(11))
         self.assertFalse(self.env.graph.is_valid_delete_source_vertex(7))
+
+    def test_feature_matrix(self):
+        matrix = self.env._get_feature_matrix()
+        test_matrix = np.zeros((self.env.template_size, 5))
+        test_matrix[:6, :] = [
+            2/3,
+            3,
+            6/3,
+            3,
+            1
+        ]
+        self.assertTrue((test_matrix == matrix).all())
 
 
 if __name__ == "__main__":

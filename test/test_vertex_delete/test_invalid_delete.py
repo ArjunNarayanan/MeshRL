@@ -14,9 +14,12 @@ def initialize_graph():
 class TestDeleteVertex(unittest.TestCase):
     def setUp(self) -> None:
         self.graph = initialize_graph()
+        vidx = self.graph.source_vertex(4, tag=False)
+        self.graph.user_defined_vertices.remove(vidx)
 
     def test_invalid_delete(self):
         self.assertFalse(self.graph.is_valid_delete_source_vertex(6))
+        self.assertFalse(self.graph.is_valid_delete_source_vertex(4))
 
 
 if __name__ == "__main__":

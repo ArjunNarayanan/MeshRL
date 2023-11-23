@@ -106,6 +106,27 @@ class HexEnv(gym.Env):
         self.index_to_halfedge = self.graph.knn_halfedges(source_halfedge, self.template_size)
         self.halfedge_to_index = {halfedge: idx for idx, halfedge in enumerate(self.index_to_halfedge)}
 
+    def _get_feature_matrix(self):
+        matrix = np.zeros((self.template_size, 5))
+        for order, hidx in enumerate(self.index_to_halfedge):
+            vidx = self.graph.source_vertex(hidx, tag=False)
+            vertex_degree = self.graph.vertex_degree(vidx)
+            vertex_desired_degree = self.vertex_desired_degree[vidx]
+            is_user_defined_vertex = 1.0 if self.graph.is_user_defined_vertex(vidx) else 0.0
+
+            fidx = self.graph.face(hidx)
+            face_degree = self.graph.face_degree(fidx)
+
+            matrix[order, :] = [
+                vertex_degree / vertex_desired_degree,
+                vertex_desired_degree,
+                face_degree / self.face_desired_degree,
+                self.face_desired_degree,
+                is_user_defined_vertex
+            ]
+
+        return matrix
+
     def _step_insert_edge(self, hidx, num_steps):
         if self.graph.is_valid_edge_insert(hidx, num_steps):
             original_face_idx = self.graph.face(hidx)
@@ -253,7 +274,7 @@ class HexEnv(gym.Env):
 
     def step(self, linear_action_index):
         if self.num_actions >= self.max_actions:
-            print("WARNING : NUM ACTIONS > MAX ACTIONS!!") # this should not happen
+            print("WARNING : NUM ACTIONS > MAX ACTIONS!!")  # this should not happen
 
         halfedge_idx = linear_action_index // self.num_actions_per_halfedge
         local_action_index = linear_action_index % self.num_actions_per_halfedge
@@ -273,3 +294,4 @@ class HexEnv(gym.Env):
 
 if __name__ == "__main__":
     env = HexEnv(shuffle_idx=False)
+    matrix = env._get_feature_matrix()
