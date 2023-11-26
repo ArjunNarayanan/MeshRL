@@ -32,13 +32,13 @@ def generate_coordinates():
 
 
 class HexEnv(gym.Env):
-    def __init__(self, shuffle_idx=True):
+    def __init__(self, randomize=True, template_size=18):
         super().__init__()
-        self.template_size = 18
+        self.template_size = template_size
         self.max_edge_addition_steps = 3
         self.num_actions_per_halfedge = self.max_edge_addition_steps + 3
         self.max_actions = 10
-        self.shuffle_idx = shuffle_idx
+        self.randomize = randomize
 
         self.interior_vertex_desired_degree = 6
         self.boundary_vertex_desired_degree = 4
@@ -46,7 +46,7 @@ class HexEnv(gym.Env):
 
         self.num_actions = 0
 
-        graph, desired_degree = initialize_graph_and_desired_degree(self.shuffle_idx)
+        graph, desired_degree = initialize_graph_and_desired_degree(self.randomize)
         self.graph = graph
         self.vertex_desired_degree = desired_degree
 
@@ -56,6 +56,9 @@ class HexEnv(gym.Env):
 
         halfedges = self.graph.halfedge_list()
         self._build_template(halfedges)
+
+        self._template_boundary_index = -2
+        self._geometric_boundary_index = -1
 
     def global_score(self):
         vertices = self.graph.vertex_list(tag=False)
@@ -98,7 +101,12 @@ class HexEnv(gym.Env):
         total_score = vertex_score + face_score
 
         max_indices = np.nonzero(total_score == total_score.max())[0]
-        template_source_idx = np.random.choice(max_indices)
+
+        if self.randomize:
+            template_source_idx = np.random.choice(max_indices)
+        else:
+            template_source_idx = max_indices[0]
+
         return halfedges[template_source_idx]
 
     def _build_template(self, halfedges):
@@ -126,6 +134,42 @@ class HexEnv(gym.Env):
             ]
 
         return matrix
+
+    def _get_next_edges(self):
+        next_edges = np.arange(self.template_size)
+        for (idx, hidx) in enumerate(self.index_to_halfedge):
+            next_hidx = self.graph.next_halfedge(hidx)
+            next_idx = self.halfedge_to_index.get(next_hidx, self._template_boundary_index)
+            next_edges[idx] = next_idx
+        return next_edges
+
+    def _get_previous_edges(self):
+        prev_edges = np.arange(self.template_size)
+        for (idx, hidx) in enumerate(self.index_to_halfedge):
+            prev_hidx = self.graph.previous_halfedge(hidx)
+            prev_idx = self.halfedge_to_index.get(prev_hidx, self._template_boundary_index)
+            prev_edges[idx] = prev_idx
+        return prev_edges
+
+    def _get_twin_edges(self):
+        twin_edges = np.arange(self.template_size)
+        for idx, hidx in enumerate(self.index_to_halfedge):
+            if self.graph.halfedge_on_boundary(hidx):
+                twin_edges[idx] = self._geometric_boundary_index
+            else:
+                twin_hidx = self.graph.twin_halfedge(hidx)
+                twin_idx = self.halfedge_to_index.get(twin_hidx, self._template_boundary_index)
+                twin_edges[idx] = twin_idx
+        return twin_edges
+
+    def _get_obs(self):
+        obs = {
+            "features": self._get_feature_matrix(),
+            "next": self._get_next_edges(),
+            "previous": self._get_previous_edges(),
+            "twin": self._get_twin_edges()
+        }
+        return obs
 
     def _step_insert_edge(self, hidx, num_steps):
         if self.graph.is_valid_edge_insert(hidx, num_steps):
@@ -272,6 +316,19 @@ class HexEnv(gym.Env):
         else:
             self.reward = self.no_action_reward
 
+    def reset(self, seed=None, options=None):
+        graph, desired_degree = initialize_graph_and_desired_degree(self.randomize)
+        self.graph = graph
+        self.vertex_desired_degree = desired_degree
+        self._build_template(self.graph.halfedge_list())
+
+        self.num_actions = 0
+        self.score = self.global_score()
+        self.reward = 0
+
+        observation = self._get_obs()
+        return observation, {"score": self.score}
+
     def step(self, linear_action_index):
         if self.num_actions >= self.max_actions:
             print("WARNING : NUM ACTIONS > MAX ACTIONS!!")  # this should not happen
@@ -282,8 +339,9 @@ class HexEnv(gym.Env):
 
         self.num_actions += 1
         terminated = self.is_terminated()
+        observation = self._get_obs()
 
-        # TODO: implement function to construct observation
+        return observation, self.reward, terminated, False, {"score": self.score}
 
     def is_terminated(self):
         if self.num_actions >= self.max_actions or self.score == 0:
@@ -292,6 +350,8 @@ class HexEnv(gym.Env):
             return False
 
 
+# env = HexEnv(randomize=False, template_size=3)
+
 if __name__ == "__main__":
-    env = HexEnv(shuffle_idx=False)
+    env = HexEnv(randomize=False)
     matrix = env._get_feature_matrix()
