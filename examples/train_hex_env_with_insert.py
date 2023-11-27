@@ -31,8 +31,11 @@ def make_output_dir_if_necessary(output_dir):
 
 template_size = 18
 num_actions_per_halfedge = 6
+env = HexEnv(template_size=template_size)
+
+feature_extractor_size = 128
+feature_extractor_layers = 2
 num_envs = 6
-# env = HexEnv(template_size=template_size)
 env = make_vec_env(HexEnv, num_envs)
 
 
@@ -44,8 +47,8 @@ policy_kwargs = dict(
     features_extractor_class=FeatureExtractor,
     features_extractor_kwargs=dict(
         input_features=5,
-        output_features=num_actions,
-        number_of_layers=5
+        output_features=feature_extractor_size,
+        number_of_layers=feature_extractor_layers
     )
 )
 
