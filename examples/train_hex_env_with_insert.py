@@ -8,8 +8,6 @@ sys.path.append(os.getcwd())
 from envs.hex_env_with_insert import HexEnv
 from src.feature_extractor import FeatureExtractor
 from src.policy import CustomActorCriticPolicy
-from src.render import Renderer
-# import matplotlib.pyplot as plt
 
 
 def extract_env(wrapped_env):
@@ -59,7 +57,6 @@ model = PPO(
     ent_coef=0.01,
     tensorboard_log=output_dir
 )
-wrapped_env = model.env
 
 eval_env = HexEnv(template_size=template_size)
 eval_callback = EvalCallback(
@@ -72,29 +69,3 @@ eval_callback = EvalCallback(
 
 if __name__ == "__main__":
     model.learn(total_timesteps=1000000, callback=eval_callback)
-
-# obs = model.env.reset()
-# render_env = extract_env(model.env)
-# renderer = Renderer(render_env.graph, coords=render_env.graph.vertex_coordinates)
-# renderer.plot()
-# save_fig(renderer.fig, "step-3")
-
-
-# model = PPO.load(
-#     "examples/hex_env_with_insert_log/best_model",
-#     wrapped_env
-# )
-#
-# render_env = extract_env(model.env)
-# renderer = Renderer(render_env.graph, coords=render_env.graph.vertex_coordinates)
-# renderer.plot()
-#
-# obs = obs_as_tensor(obs, torch.device("cpu"))
-# with torch.no_grad():
-#     dist = model.policy.get_distribution(obs)
-# probs = dist.distribution.probs[0]
-# fig = plot_distribution(probs)
-# action = dist.get_actions()
-# obs, reward, done, info = model.env.step(action)
-#
-# renderer.plot()
