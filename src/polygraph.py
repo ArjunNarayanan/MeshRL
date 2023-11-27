@@ -131,22 +131,18 @@ class PolyGraph(nx.DiGraph):
 
     @staticmethod
     def _ensure_tag_form(idx, tag):
-        if isinstance(idx, int):
-            return idx, tag
-        else:
-            assert isinstance(idx, tuple)
-            assert len(idx) == 2
-            # assert idx[1] == tag
+        if isinstance(idx, tuple):
+            # assert len(idx) == 2
             return idx
+        else:
+            return (idx, tag)
 
     @staticmethod
     def _ensure_untagged_form(idx):
-        if isinstance(idx, int):
-            return idx
-        else:
-            assert isinstance(idx, tuple)
-            assert len(idx) == 2
+        if isinstance(idx, tuple):
             return idx[0]
+        else:
+            return idx
 
     def _add_twin_edges(self):
         halfedge_nodes = [(h, self.halfedge_tag) for h in range(self.next_halfedge_index)]

@@ -2,6 +2,7 @@ from src.polygraph import PolyGraph
 import gymnasium as gym
 from gymnasium.spaces import Discrete, Box, Dict
 import numpy as np
+import torch
 
 
 def initialize_graph_and_desired_degree(shuffle):
@@ -59,6 +60,16 @@ class HexEnv(gym.Env):
 
         self._template_boundary_index = -2
         self._geometric_boundary_index = -1
+
+        self.action_space = Discrete(self.num_actions_per_halfedge)
+        self.observation_space = Dict(
+            {
+                "features": Box(low=0, high=4, shape=(self.template_size, 5)),
+                "next": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
+                "previous": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
+                "twin": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64)
+            }
+        )
 
     def global_score(self):
         vertices = self.graph.vertex_list(tag=False)
@@ -330,6 +341,9 @@ class HexEnv(gym.Env):
         return observation, {"score": self.score}
 
     def step(self, linear_action_index):
+        # if isinstance(linear_action_index, torch.Tensor):
+        #     linear_action_index = linear_action_index.item()
+
         if self.num_actions >= self.max_actions:
             print("WARNING : NUM ACTIONS > MAX ACTIONS!!")  # this should not happen
 
