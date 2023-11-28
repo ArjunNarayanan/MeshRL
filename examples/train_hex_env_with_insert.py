@@ -71,7 +71,9 @@ if __name__ == "__main__":
         tensorboard_log=output_dir
     )
 
-    eval_env = HexEnv(template_size=template_size)
+    eval_env = make_vec_env(HexEnv, 1)
+    # eval_env = HexEnv(template_size=template_size)
+
     eval_callback = EvalCallback(
         eval_env,
         best_model_save_path=output_dir,

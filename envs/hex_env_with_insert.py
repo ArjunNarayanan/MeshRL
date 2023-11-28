@@ -33,7 +33,7 @@ def generate_coordinates():
 
 
 class HexEnv(gym.Env):
-    def __init__(self, randomize=True, template_size=18):
+    def __init__(self, randomize=True, template_size=18, no_action_reward=-10):
         super().__init__()
         self.template_size = template_size
         self.max_edge_addition_steps = 3
@@ -53,7 +53,7 @@ class HexEnv(gym.Env):
 
         self.reward = 0
         self.score = self.global_score()
-        self.no_action_reward = -1
+        self.no_action_reward = no_action_reward
 
         halfedges = self.graph.halfedge_list()
         self._build_template(halfedges)
