@@ -41,7 +41,7 @@ if __name__ == "__main__":
     num_actions_per_halfedge = 6
 
     feature_extractor_size = 128
-    feature_extractor_layers = 2
+    feature_extractor_layers = 5
 
     num_envs = args.num_envs
     if num_envs > 1:

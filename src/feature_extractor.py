@@ -28,7 +28,7 @@ class FeatureExtractor(BaseFeaturesExtractor):
         return features
 
     @staticmethod
-    def unroll_and_offset_indices(batched_indices: torch.Tensor):
+    def _archive_unroll_and_offset_indices(batched_indices: torch.Tensor):
         assert batched_indices.ndim == 2
         num_batch, skip = batched_indices.shape
         offset = skip
@@ -41,6 +41,20 @@ class FeatureExtractor(BaseFeaturesExtractor):
 
         offset_indices = torch.cat(offset_indices)
         return offset_indices
+
+    @staticmethod
+    def unroll_and_offset_indices(batched_indices: torch.Tensor):
+        assert batched_indices.ndim == 2
+        num_batch, num_features = batched_indices.shape
+
+        negative_mask = batched_indices < 0
+        offset = (num_features * torch.arange(num_batch, device=batched_indices.device)).reshape(-1, 1)
+
+        offset_indices = batched_indices + offset
+        offset_indices[negative_mask] = batched_indices[negative_mask]
+
+        unrolled_indices = offset_indices.ravel()
+        return unrolled_indices
 
     def _forward_batch(self, features, next_indices, prev_indices, twin_indices):
         # Check input shape consistency

@@ -27,12 +27,12 @@ extracted_env = env.envs[0].env
 renderer = Renderer(extracted_env.graph, extracted_env.graph.vertex_coordinates)
 renderer.plot()
 
-# obs = env.reset()
+obs = env.reset()
 obs = obs_as_tensor(obs, torch.device("cpu"))
 with torch.no_grad():
     dist = model.policy.get_distribution(obs)
-probs = dist.distribution.probs[0]
-fig = plot_distribution(probs)
+# probs = dist.distribution.probs[0]
+# fig = plot_distribution(probs)
 
 action = dist.get_actions()
 action = action.cpu().numpy()
