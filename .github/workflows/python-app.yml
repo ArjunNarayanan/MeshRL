@@ -6,6 +6,9 @@ name: Python application
 on:
   push:
     branches: [ "main" ]
+    paths-ignore:
+      - "examples/"
+      - "experiments/"
   pull_request:
     branches: [ "main" ]
 
