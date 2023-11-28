@@ -33,7 +33,7 @@ def make_output_dir_if_necessary(output_dir):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train PPO agent")
-    parser.add_argument("-num_envs", default=1)
+    parser.add_argument("-num_envs", default=1, type=int)
     parser.add_argument("-output_dir", required=True)
     args = parser.parse_args()
 
