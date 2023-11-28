@@ -47,7 +47,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     template_size = 18
-    max_actions = 20
+    max_actions = 24
     no_action_reward = -4
     num_actions_per_halfedge = 6
 
@@ -83,7 +83,6 @@ if __name__ == "__main__":
     )
 
     eval_env = make_vec_env(HexEnv, 1)
-    # eval_env = HexEnv(template_size=template_size)
 
     eval_callback = EvalCallback(
         eval_env,
