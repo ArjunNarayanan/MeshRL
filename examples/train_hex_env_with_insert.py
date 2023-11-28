@@ -31,6 +31,15 @@ def make_output_dir_if_necessary(output_dir):
         os.makedirs(output_dir)
 
 
+def initialize_environment():
+    env = HexEnv(
+        template_size=template_size,
+        no_action_reward=no_action_reward,
+        max_actions=max_actions
+    )
+    return env
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train PPO agent")
     parser.add_argument("-num_envs", default=1, type=int)
@@ -38,6 +47,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     template_size = 18
+    max_actions = 20
+    no_action_reward = -4
     num_actions_per_halfedge = 6
 
     feature_extractor_size = 128
@@ -45,9 +56,9 @@ if __name__ == "__main__":
 
     num_envs = args.num_envs
     if num_envs > 1:
-        env = make_vec_env(HexEnv, num_envs)
+        env = make_vec_env(initialize_environment, num_envs)
     else:
-        env = HexEnv()
+        env = initialize_environment()
 
     num_actions = template_size * num_actions_per_halfedge
     output_dir = args.output_dir

@@ -33,12 +33,18 @@ def generate_coordinates():
 
 
 class HexEnv(gym.Env):
-    def __init__(self, randomize=True, template_size=18, no_action_reward=-10):
+    def __init__(
+            self,
+            randomize=True,
+            template_size=18,
+            no_action_reward=-4,
+            max_actions=20
+    ):
         super().__init__()
         self.template_size = template_size
         self.max_edge_addition_steps = 3
         self.num_actions_per_halfedge = self.max_edge_addition_steps + 3
-        self.max_actions = 10
+        self.max_actions = max_actions
         self.randomize = randomize
 
         self.interior_vertex_desired_degree = 6
