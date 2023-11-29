@@ -28,7 +28,7 @@ def initialize_env():
         template_size=template_size,
         no_action_reward=no_action_reward,
         max_actions=max_actions,
-        incremental_reward=False
+        incremental_reward=True
     )
     return env
 
@@ -50,10 +50,15 @@ fig = plot_distribution(probs)
 
 action = dist.get_actions()
 action = action.cpu().numpy()
-print("Selected action : ", action)
+action_halfedge = action[0]//6
+action_type = action[0]%6
+print("Selected action : ", action[0])
+print("\tHalfedge: ", action_halfedge, " \tType: ", action_type)
 obs, reward, done, info = env.step(action)
 print("Reward : ", reward)
 
 extracted_env = env.envs[0].env
+template_halfedges = extracted_env.index_to_halfedge
+print("Template : ", template_halfedges)
 renderer = Renderer(extracted_env.graph, extracted_env.graph.vertex_coordinates)
 renderer.plot()

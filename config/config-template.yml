@@ -1,0 +1,30 @@
+########################################################################################
+# NOTES: <Include any notes in this section about the experiment>
+#     BASE: <Which was the configuration file that this file was based on?>
+#     CHANGELOG: <What did you change from the baseline config>
+#     HYPOTHESIS: <What was the rationale for the change?>
+#     OBSERVATIONS: <After the experiment was completed, what did you observe?>
+#
+#
+########################################################################################
+
+environment:
+  name: HexEnv # regular hexagon with vertex insert option
+  randomize: False # randomize node IDs and template source selection
+  template_size: 12
+  max_actions: 12
+  incremental_reward: False
+  no_action_reward: None
+feature_extractor:
+  output_features: 128
+  number_of_layers: 5
+PPO:
+  ent_coef: 0.1
+  vf_coef: 0.1
+  clip_range: 0.05
+  learning_rate: 1.e-4
+  batch_size: 256
+evaluator:
+  eval_freq: 5000
+total_timesteps: 10_000_000
+

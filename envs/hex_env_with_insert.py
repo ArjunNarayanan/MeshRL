@@ -32,19 +32,23 @@ def generate_coordinates():
     return coords
 
 
+def get_max_edge_addition_steps():
+    return 3
+
+
 class HexEnv(gym.Env):
     def __init__(
             self,
-            randomize=True,
-            template_size=18,
-            no_action_reward=-4,
-            max_actions=20,
-            incremental_reward=False
+            template_size,
+            max_actions,
+            randomize,
+            incremental_reward,
+            no_action_reward,
     ):
         super().__init__()
         self.template_size = template_size
-        self.max_edge_addition_steps = 3
-        self.num_actions_per_halfedge = self.max_edge_addition_steps + 3
+        self.max_edge_addition_steps = get_max_edge_addition_steps()
+        self.num_actions_per_halfedge = self.num_actions_per_halfedge()
         self.max_actions = max_actions
         self.randomize = randomize
         self.incremental_reward = incremental_reward
@@ -73,11 +77,34 @@ class HexEnv(gym.Env):
         self.action_space = Discrete(self.num_actions_per_halfedge)
         self.observation_space = Dict(
             {
-                "features": Box(low=0, high=4, shape=(self.template_size, 5)),
+                "features": Box(low=0, high=4, shape=(self.template_size, self.feature_size())),
                 "next": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
                 "previous": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
                 "twin": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64)
             }
+        )
+
+    @staticmethod
+    def num_actions_per_halfedge():
+        return get_max_edge_addition_steps() + 3
+
+    @staticmethod
+    def feature_size():
+        return 5
+
+    @classmethod
+    def from_config(cls, config):
+        randomize = config.get("randomize", False)
+        template_size = config["template_size"]
+        max_actions = config["max_actions"]
+        incremental_reward = config["incremental_reward"]
+        no_action_reward = config.get("no_action_reward", 0)
+        return cls(
+            template_size,
+            max_actions,
+            randomize,
+            incremental_reward,
+            no_action_reward
         )
 
     def global_score(self):
@@ -379,10 +406,3 @@ class HexEnv(gym.Env):
             return True
         else:
             return False
-
-
-# env = HexEnv(randomize=False, template_size=3)
-
-if __name__ == "__main__":
-    env = HexEnv(randomize=False)
-    matrix = env._get_feature_matrix()
