@@ -17,15 +17,6 @@ def extract_env(wrapped_env):
     return env
 
 
-def plot_distribution(probs):
-    fig, ax = plt.subplots()
-    ax.bar(range(len(probs)), probs)
-    ax.set_xlabel("Actions")
-    ax.set_ylabel("Probabilities")
-    ax.grid()
-    return fig
-
-
 def make_output_dir_if_necessary(output_dir):
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
