@@ -5,6 +5,8 @@ from envs.hex_env_with_insert import HexEnv
 from src.render import Renderer
 from stable_baselines3.common.utils import obs_as_tensor
 import matplotlib.pyplot as plt
+import os
+from src.utils import load_yaml_config
 
 
 def plot_distribution(probs):
@@ -19,23 +21,21 @@ def plot_distribution(probs):
     return fig
 
 
-def initialize_env():
-    template_size = 12
-    max_actions = 12
-    no_action_reward = -4
-
-    env = HexEnv(
-        template_size=template_size,
-        no_action_reward=no_action_reward,
-        max_actions=max_actions,
-        incremental_reward=True
-    )
+def initialize_environment():
+    env_config = config["environment"]
+    env = HexEnv.from_config(env_config)
     return env
 
 
-checkpoint = "experiments/hex_env_with_insert/best_model.zip"
+input_folder = "experiments/hex_env_with_insert/eps-0-05"
+
+checkpoint = os.path.join(input_folder, "best_model.zip")
 model = PPO.load(checkpoint)
-env = make_vec_env(initialize_env, 1)
+
+config_fn = os.path.join(input_folder, "config.yml")
+config = load_yaml_config(config_fn)
+
+env = make_vec_env(initialize_environment, 1)
 
 extracted_env = env.envs[0].env
 renderer = Renderer(extracted_env.graph, extracted_env.graph.vertex_coordinates)
