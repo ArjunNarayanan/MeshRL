@@ -38,7 +38,8 @@ class HexEnv(gym.Env):
             randomize=True,
             template_size=18,
             no_action_reward=-4,
-            max_actions=20
+            max_actions=20,
+            incremental_reward=False
     ):
         super().__init__()
         self.template_size = template_size
@@ -46,6 +47,7 @@ class HexEnv(gym.Env):
         self.num_actions_per_halfedge = self.max_edge_addition_steps + 3
         self.max_actions = max_actions
         self.randomize = randomize
+        self.incremental_reward = incremental_reward
 
         self.interior_vertex_desired_degree = 6
         self.boundary_vertex_desired_degree = 4
@@ -59,6 +61,7 @@ class HexEnv(gym.Env):
 
         self.reward = 0
         self.score = self.global_score()
+        self.initial_score = self.score
         self.no_action_reward = no_action_reward
 
         halfedges = self.graph.halfedge_list()
@@ -347,8 +350,6 @@ class HexEnv(gym.Env):
         return observation, {"score": self.score}
 
     def step(self, linear_action_index):
-        # if isinstance(linear_action_index, torch.Tensor):
-        #     linear_action_index = linear_action_index.item()
 
         if self.num_actions >= self.max_actions:
             print("WARNING : NUM ACTIONS > MAX ACTIONS!!")  # this should not happen
@@ -356,10 +357,20 @@ class HexEnv(gym.Env):
         halfedge_idx = linear_action_index // self.num_actions_per_halfedge
         local_action_index = linear_action_index % self.num_actions_per_halfedge
         self._step_halfedge_action(halfedge_idx, local_action_index)
-
         self.num_actions += 1
+
+        # update the template after step:
+        halfedges = self.graph.halfedge_list()
+        self._build_template(halfedges)
+
         terminated = self.is_terminated()
         observation = self._get_obs()
+
+        if not self.incremental_reward:
+            if not terminated:
+                self.reward = 0
+            else:
+                self.reward = self.initial_score - self.score
 
         return observation, self.reward, terminated, False, {"score": self.score}
 

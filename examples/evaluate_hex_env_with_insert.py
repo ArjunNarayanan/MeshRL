@@ -19,9 +19,23 @@ def plot_distribution(probs):
     return fig
 
 
+def initialize_env():
+    template_size = 12
+    max_actions = 12
+    no_action_reward = -4
+
+    env = HexEnv(
+        template_size=template_size,
+        no_action_reward=no_action_reward,
+        max_actions=max_actions,
+        incremental_reward=False
+    )
+    return env
+
+
 checkpoint = "experiments/hex_env_with_insert/best_model.zip"
 model = PPO.load(checkpoint)
-env = make_vec_env(HexEnv, 1)
+env = make_vec_env(initialize_env, 1)
 
 extracted_env = env.envs[0].env
 renderer = Renderer(extracted_env.graph, extracted_env.graph.vertex_coordinates)
@@ -31,8 +45,8 @@ obs = env.reset()
 obs = obs_as_tensor(obs, torch.device("cpu"))
 with torch.no_grad():
     dist = model.policy.get_distribution(obs)
-# probs = dist.distribution.probs[0]
-# fig = plot_distribution(probs)
+probs = dist.distribution.probs[0]
+fig = plot_distribution(probs)
 
 action = dist.get_actions()
 action = action.cpu().numpy()

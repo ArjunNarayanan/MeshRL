@@ -2,7 +2,6 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import EvalCallback
 import argparse
 from stable_baselines3.common.env_util import make_vec_env
-import numpy as np
 import sys
 import os
 
@@ -35,7 +34,8 @@ def initialize_environment():
     env = HexEnv(
         template_size=template_size,
         no_action_reward=no_action_reward,
-        max_actions=max_actions
+        max_actions=max_actions,
+        incremental_reward=False,
     )
     return env
 
@@ -46,11 +46,13 @@ if __name__ == "__main__":
     parser.add_argument("-output_dir", required=True)
     args = parser.parse_args()
 
-    template_size = 18
-    max_actions = 24
+    template_size = 12
+    max_actions = 12
     no_action_reward = -4
     num_actions_per_halfedge = 6
 
+    entropy_coeff = 1
+    value_coeff = 0.1
     feature_extractor_size = 128
     feature_extractor_layers = 5
 
@@ -78,11 +80,12 @@ if __name__ == "__main__":
         env,
         policy_kwargs=policy_kwargs,
         verbose=1,
-        ent_coef=0.01,
+        ent_coef=entropy_coeff,
+        vf_coef=value_coeff,
         tensorboard_log=output_dir
     )
 
-    eval_env = make_vec_env(HexEnv, 1)
+    eval_env = make_vec_env(initialize_environment, 1)
 
     eval_callback = EvalCallback(
         eval_env,
