@@ -5,7 +5,13 @@ import numpy as np
 
 class TestHexEnv(unittest.TestCase):
     def setUp(self):
-        self.env = HexEnv(False)
+        self.env = HexEnv(
+            template_size=6,
+            max_actions=10,
+            randomize=False,
+            incremental_reward=True,
+            no_action_reward=-1
+        )
 
     def test_insert_edge_reward(self):
         self.env._step_insert_edge(0, 2)
@@ -152,7 +158,13 @@ class TestHexEnv(unittest.TestCase):
 
 class TestHexEnvTemplate3(unittest.TestCase):
     def setUp(self) -> None:
-        self.env = HexEnv(randomize=False, template_size=3)
+        self.env = HexEnv(
+            template_size=3,
+            max_actions=10,
+            randomize=False,
+            incremental_reward=True,
+            no_action_reward=-1
+        )
 
     def test_feature_matrix(self):
         matrix = self.env._get_feature_matrix()
@@ -184,7 +196,13 @@ class TestHexEnvTemplate3(unittest.TestCase):
 
 class TestObs4(unittest.TestCase):
     def setUp(self) -> None:
-        env = HexEnv(randomize=False, template_size=4)
+        env = HexEnv(
+            template_size=4,
+            max_actions=10,
+            randomize=False,
+            incremental_reward=True,
+            no_action_reward=-1
+        )
         env._step_insert_edge(3, 2)
         env._build_template([1])
         self.env = env
@@ -221,7 +239,13 @@ class TestObs4(unittest.TestCase):
 
 class TestObs5(unittest.TestCase):
     def setUp(self) -> None:
-        env = HexEnv(randomize=False, template_size=5)
+        env = HexEnv(
+            template_size=5,
+            max_actions=10,
+            randomize=False,
+            incremental_reward=True,
+            no_action_reward=-1
+        )
         env._step_insert_edge(3, 2)
         env._build_template([1])
         self.env = env
@@ -260,7 +284,13 @@ class TestObs5(unittest.TestCase):
 
 class TestActionSequence(unittest.TestCase):
     def setUp(self) -> None:
-        env = HexEnv(randomize=False, template_size=18)
+        env = HexEnv(
+            template_size=18,
+            max_actions=10,
+            randomize=False,
+            incremental_reward=True,
+            no_action_reward=-1
+        )
         env._step_insert_edge(5, 2)
         env._step_insert_vertex(3)
         env._step_insert_vertex(6)
