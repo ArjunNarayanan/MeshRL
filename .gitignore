@@ -4,3 +4,4 @@ __pycache__/
 experiments/
 bash_scripts/
 job_scripts/
+*.out
