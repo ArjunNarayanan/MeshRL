@@ -41,24 +41,27 @@ extracted_env = env.envs[0].env
 renderer = Renderer(extracted_env.graph, extracted_env.graph.vertex_coordinates)
 renderer.plot()
 
-obs = env.reset()
-obs = obs_as_tensor(obs, torch.device("cpu"))
-with torch.no_grad():
-    dist = model.policy.get_distribution(obs)
-probs = dist.distribution.probs[0]
-fig = plot_distribution(probs)
-
-action = dist.get_actions()
-action = action.cpu().numpy()
-action_halfedge = action[0]//6
-action_type = action[0]%6
-print("Selected action : ", action[0])
-print("\tHalfedge: ", action_halfedge, " \tType: ", action_type)
-obs, reward, done, info = env.step(action)
-print("Reward : ", reward)
-
-extracted_env = env.envs[0].env
-template_halfedges = extracted_env.index_to_halfedge
-print("Template : ", template_halfedges)
-renderer = Renderer(extracted_env.graph, extracted_env.graph.vertex_coordinates)
+obs, reward, done, _, _ = extracted_env.step(30)
 renderer.plot()
+
+# obs = env.reset()
+# obs = obs_as_tensor(obs, torch.device("cpu"))
+# with torch.no_grad():
+#     dist = model.policy.get_distribution(obs)
+# probs = dist.distribution.probs[0]
+# fig = plot_distribution(probs)
+#
+# action = dist.get_actions()
+# action = action.cpu().numpy()
+# action_halfedge = action[0]//6
+# action_type = action[0]%6
+# print("Selected action : ", action[0])
+# print("\tHalfedge: ", action_halfedge, " \tType: ", action_type)
+# obs, reward, done, info = env.step(action)
+# print("Reward : ", reward)
+#
+# extracted_env = env.envs[0].env
+# template_halfedges = extracted_env.index_to_halfedge
+# print("Template : ", template_halfedges)
+# renderer = Renderer(extracted_env.graph, extracted_env.graph.vertex_coordinates)
+# renderer.plot()

@@ -43,7 +43,7 @@ class Renderer:
         self.ax.fill(x, y, facecolor="lightgray", edgecolor="black", linewidth=2)
 
     def plot_all_faces(self):
-        for face_id in range(self.graph.number_of_faces()):
+        for face_id in self.graph.face_list(tag=False):
             self.plot_face(face_id)
 
     def plot_vertices(self, label=True):

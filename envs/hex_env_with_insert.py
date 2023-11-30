@@ -48,7 +48,7 @@ class HexEnv(gym.Env):
         super().__init__()
         self.template_size = template_size
         self.max_edge_addition_steps = get_max_edge_addition_steps()
-        self.num_actions_per_halfedge = self.num_actions_per_halfedge()
+        self.num_actions_per_halfedge = self.get_num_actions_per_halfedge()
         self.max_actions = max_actions
         self.randomize = randomize
         self.incremental_reward = incremental_reward
@@ -85,7 +85,7 @@ class HexEnv(gym.Env):
         )
 
     @staticmethod
-    def num_actions_per_halfedge():
+    def get_num_actions_per_halfedge():
         return get_max_edge_addition_steps() + 3
 
     @staticmethod
@@ -351,17 +351,43 @@ class HexEnv(gym.Env):
     def _step_halfedge_action(self, hidx, action):
         assert 0 <= action < self.num_actions_per_halfedge
 
-        if self.graph.is_halfedge(hidx):
+        if hidx < len(self.index_to_halfedge):
+            halfedge = self.index_to_halfedge[hidx]
+        else:
+            halfedge = None
+
+        if self.graph.is_halfedge(halfedge):
             if action < self.max_edge_addition_steps:
-                self._step_insert_edge(hidx, action + 1)
+                self._step_insert_edge(halfedge, action + 1)
             elif action == self.max_edge_addition_steps:
-                self._step_delete_edge(hidx)
+                self._step_delete_edge(halfedge)
             elif action == self.max_edge_addition_steps + 1:
-                self._step_insert_vertex(hidx)
+                self._step_insert_vertex(halfedge)
             else:  # delete vertex
-                self._step_delete_source_vertex(hidx)
+                self._step_delete_source_vertex(halfedge)
         else:
             self.reward = self.no_action_reward
+
+    def is_valid_action(self, linear_action_index):
+        halfedge_idx = linear_action_index // self.num_actions_per_halfedge
+        local_action_index = linear_action_index % self.num_actions_per_halfedge
+
+        if not self.graph.is_halfedge(halfedge_idx):
+            return False
+
+        if local_action_index < self.max_edge_addition_steps:
+            if not self.graph.is_valid_edge_insert(halfedge_idx, local_action_index + 1):
+                return False
+
+        if local_action_index == self.max_edge_addition_steps:
+            if not self.graph.is_valid_delete_halfedge(halfedge_idx):
+                return False
+
+        if local_action_index == self.num_actions_per_halfedge - 1:
+            if not self.graph.is_valid_delete_source_vertex(halfedge_idx):
+                return False
+
+        return True
 
     def reset(self, seed=None, options=None):
         graph, desired_degree = initialize_graph_and_desired_degree(self.randomize)
@@ -383,6 +409,7 @@ class HexEnv(gym.Env):
 
         halfedge_idx = linear_action_index // self.num_actions_per_halfedge
         local_action_index = linear_action_index % self.num_actions_per_halfedge
+
         self._step_halfedge_action(halfedge_idx, local_action_index)
         self.num_actions += 1
 

@@ -52,7 +52,7 @@ if __name__ == "__main__":
         env = initialize_environment()
 
     template_size = config["environment"]["template_size"]
-    num_actions = template_size * HexEnv.num_actions_per_halfedge()
+    num_actions = template_size * HexEnv.get_num_actions_per_halfedge()
 
     default_output_dir = os.path.dirname(args.config)
     output_dir = config.get("output_dir", default_output_dir)
