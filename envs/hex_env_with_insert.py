@@ -99,6 +99,9 @@ class HexEnv(gym.Env):
         max_actions = config["max_actions"]
         incremental_reward = config["incremental_reward"]
         no_action_reward = config.get("no_action_reward", 0)
+        if no_action_reward is None:
+            no_action_reward = 0
+            
         return cls(
             template_size,
             max_actions,
