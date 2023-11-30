@@ -1,8 +1,10 @@
+import os
 from src.polygraph import PolyGraph
 import gymnasium as gym
 from gymnasium.spaces import Discrete, Box, Dict
 import numpy as np
-import torch
+from copy import deepcopy
+import pickle
 
 
 def initialize_graph_and_desired_degree(shuffle):
@@ -44,6 +46,7 @@ class HexEnv(gym.Env):
             randomize,
             incremental_reward,
             no_action_reward,
+            logdir=None
     ):
         super().__init__()
         self.template_size = template_size
@@ -68,16 +71,27 @@ class HexEnv(gym.Env):
         self.initial_score = self.score
         self.no_action_reward = no_action_reward
 
+        # Attributes for excpetion handling
+        self.initial_graph = deepcopy(self.graph)
+        self.exception_occurred = False
+        self.exception_count = 0
+        self.action_sequence = []
+        if logdir is None:
+            logdir = os.getcwd()
+        self.logdir = logdir
+
         halfedges = self.graph.halfedge_list()
         self._build_template(halfedges)
 
         self._template_boundary_index = -2
         self._geometric_boundary_index = -1
 
+        self.num_features = self.feature_size()
+
         self.action_space = Discrete(self.num_actions_per_halfedge)
         self.observation_space = Dict(
             {
-                "features": Box(low=0, high=4, shape=(self.template_size, self.feature_size())),
+                "features": Box(low=0, high=4, shape=(self.template_size, self.num_features)),
                 "next": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
                 "previous": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
                 "twin": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64)
@@ -99,15 +113,17 @@ class HexEnv(gym.Env):
         max_actions = config["max_actions"]
         incremental_reward = config["incremental_reward"]
         no_action_reward = config.get("no_action_reward", 0)
+        logdir = config.get("logdir", None)
         if no_action_reward is None:
             no_action_reward = 0
-            
+
         return cls(
             template_size,
             max_actions,
             randomize,
             incremental_reward,
-            no_action_reward
+            no_action_reward,
+            logdir=logdir
         )
 
     def global_score(self):
@@ -165,7 +181,7 @@ class HexEnv(gym.Env):
         self.halfedge_to_index = {halfedge: idx for idx, halfedge in enumerate(self.index_to_halfedge)}
 
     def _get_feature_matrix(self):
-        matrix = np.zeros((self.template_size, 5))
+        matrix = np.zeros((self.template_size, self.num_features))
         for order, hidx in enumerate(self.index_to_halfedge):
             vidx = self.graph.source_vertex(hidx, tag=False)
             vertex_degree = self.graph.vertex_degree(vidx)
@@ -213,11 +229,27 @@ class HexEnv(gym.Env):
         return twin_edges
 
     def _get_obs(self):
+        if self.exception_occurred:
+            return self._get_blank_obs()
+        else:
+            obs = {
+                "features": self._get_feature_matrix(),
+                "next": self._get_next_edges(),
+                "previous": self._get_previous_edges(),
+                "twin": self._get_twin_edges()
+            }
+            return obs
+
+    def _get_blank_obs(self):
+        features = np.zeros((self.template_size, self.num_features))
+        next_edges = np.arange(self.template_size)
+        prev_edges = np.arange(self.template_size)
+        twin_edges = np.arange(self.template_size)
         obs = {
-            "features": self._get_feature_matrix(),
-            "next": self._get_next_edges(),
-            "previous": self._get_previous_edges(),
-            "twin": self._get_twin_edges()
+            "features": features,
+            "next": next_edges,
+            "previous": prev_edges,
+            "twin": twin_edges
         }
         return obs
 
@@ -359,6 +391,8 @@ class HexEnv(gym.Env):
         else:
             halfedge = None
 
+        self.action_sequence.append((halfedge, action))
+
         if self.graph.is_halfedge(halfedge):
             if action < self.max_edge_addition_steps:
                 self._step_insert_edge(halfedge, action + 1)
@@ -396,6 +430,11 @@ class HexEnv(gym.Env):
         graph, desired_degree = initialize_graph_and_desired_degree(self.randomize)
         self.graph = graph
         self.vertex_desired_degree = desired_degree
+
+        self.initial_graph = deepcopy(self.graph)
+        self.action_sequence = []
+        self.exception_occurred = False
+
         self._build_template(self.graph.halfedge_list())
 
         self.num_actions = 0
@@ -405,6 +444,16 @@ class HexEnv(gym.Env):
         observation = self._get_obs()
         return observation, {"score": self.score}
 
+    def _log_exception(self):
+        exception_filename = "except_env_" + str(self.exception_count) + ".pkl"
+        self.exception_count += 1
+        exception_filepath = os.path.join(self.logdir, exception_filename)
+        output_data = {"graph": self.initial_graph, "actions": self.action_sequence}
+        with open(exception_filepath, "wb") as output_file:
+            pickle.dump(output_data, output_file)
+
+        print("\n\n\tLOGGED EXCEPTED ENV TO : ", exception_filepath, "\n\n\t")
+
     def step(self, linear_action_index):
 
         if self.num_actions >= self.max_actions:
@@ -413,7 +462,13 @@ class HexEnv(gym.Env):
         halfedge_idx = linear_action_index // self.num_actions_per_halfedge
         local_action_index = linear_action_index % self.num_actions_per_halfedge
 
-        self._step_halfedge_action(halfedge_idx, local_action_index)
+        try:
+            self._step_halfedge_action(halfedge_idx, local_action_index)
+        except Exception as e:
+            self.exception_occurred = True
+            print("\n\n\tENCOUNTERED ENVIRONMENT EXCPETION\n\n")
+            self._log_exception()
+
         self.num_actions += 1
 
         # update the template after step:
@@ -432,7 +487,11 @@ class HexEnv(gym.Env):
         return observation, self.reward, terminated, False, {"score": self.score}
 
     def is_terminated(self):
-        if self.num_actions >= self.max_actions or self.score == 0:
+        if self.num_actions >= self.max_actions:
             return True
-        else:
-            return False
+        if self.score == 0:
+            return True
+        if self.exception_occurred:
+            return True
+
+        return False

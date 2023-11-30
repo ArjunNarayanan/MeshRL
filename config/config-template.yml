@@ -15,6 +15,7 @@ environment:
   max_actions: 12
   incremental_reward: False
   no_action_reward: None
+  logdir: None
 feature_extractor:
   output_features: 128
   number_of_layers: 5
