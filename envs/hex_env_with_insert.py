@@ -383,13 +383,8 @@ class HexEnv(gym.Env):
         else:
             self.reward = self.no_action_reward
 
-    def _step_halfedge_action(self, hidx, action):
+    def _step_halfedge_action(self, halfedge, action):
         assert 0 <= action < self.num_actions_per_halfedge
-
-        if hidx < len(self.index_to_halfedge):
-            halfedge = self.index_to_halfedge[hidx]
-        else:
-            halfedge = None
 
         self.action_sequence.append((halfedge, action))
 
@@ -406,22 +401,21 @@ class HexEnv(gym.Env):
             self.reward = self.no_action_reward
 
     def is_valid_action(self, linear_action_index):
-        halfedge_idx = linear_action_index // self.num_actions_per_halfedge
-        local_action_index = linear_action_index % self.num_actions_per_halfedge
+        halfedge, local_action_index = self._linear_action_index_to_halfedge_and_action(linear_action_index)
 
-        if not self.graph.is_halfedge(halfedge_idx):
+        if not self.graph.is_halfedge(halfedge):
             return False
 
         if local_action_index < self.max_edge_addition_steps:
-            if not self.graph.is_valid_edge_insert(halfedge_idx, local_action_index + 1):
+            if not self.graph.is_valid_edge_insert(halfedge, local_action_index + 1):
                 return False
 
         if local_action_index == self.max_edge_addition_steps:
-            if not self.graph.is_valid_delete_halfedge(halfedge_idx):
+            if not self.graph.is_valid_delete_halfedge(halfedge):
                 return False
 
         if local_action_index == self.num_actions_per_halfedge - 1:
-            if not self.graph.is_valid_delete_source_vertex(halfedge_idx):
+            if not self.graph.is_valid_delete_source_vertex(halfedge):
                 return False
 
         return True
@@ -454,16 +448,26 @@ class HexEnv(gym.Env):
 
         print("\n\n\tLOGGED EXCEPTED ENV TO : ", exception_filepath, "\n\n\t")
 
+    def _linear_action_index_to_halfedge_and_action(self, linear_action_index):
+        hidx = linear_action_index // self.num_actions_per_halfedge
+        local_action_index = linear_action_index % self.num_actions_per_halfedge
+
+        if hidx < len(self.index_to_halfedge):
+            halfedge = self.index_to_halfedge[hidx]
+        else:
+            halfedge = None
+
+        return halfedge, local_action_index
+
     def step(self, linear_action_index):
 
         if self.num_actions >= self.max_actions:
             print("WARNING : NUM ACTIONS > MAX ACTIONS!!")  # this should not happen
 
-        halfedge_idx = linear_action_index // self.num_actions_per_halfedge
-        local_action_index = linear_action_index % self.num_actions_per_halfedge
+        halfedge, local_action = self._linear_action_index_to_halfedge_and_action(linear_action_index)
 
         try:
-            self._step_halfedge_action(halfedge_idx, local_action_index)
+            self._step_halfedge_action(halfedge, local_action)
         except Exception as e:
             self.exception_occurred = True
             print("\n\n\tENCOUNTERED ENVIRONMENT EXCPETION\n\n")

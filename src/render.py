@@ -4,11 +4,19 @@ import src.polygraph
 
 
 class Renderer:
-    def __init__(self, graph: src.polygraph.PolyGraph, coords, vertex_size=20, shrink=0.1):
+    def __init__(
+            self,
+            graph: src.polygraph.PolyGraph,
+            coords,
+            vertex_size=20,
+            shrink=0.1,
+            label_halfedge=True,
+    ):
         self.graph = graph
         self.coords = coords
         self.vertex_size = vertex_size
         self.shrink = shrink
+        self.label_halfedge = label_halfedge
 
         fig, ax = plt.subplots()
         self.fig = fig
@@ -85,4 +93,5 @@ class Renderer:
         self.face_centroids = self._compute_face_centroids()
         self.plot_all_faces()
         self.plot_vertices()
-        self.plot_all_halfedges()
+        if self.label_halfedge:
+            self.plot_all_halfedges()

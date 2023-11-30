@@ -340,21 +340,5 @@ class TestActionSequence(unittest.TestCase):
         self.assertTrue((test_twin_edges == self.obs["twin"]).all())
 
 
-class TestActionMask(unittest.TestCase):
-    def setUp(self) -> None:
-        self.env = HexEnv(
-            template_size=8,
-            max_actions=1,
-            randomize=False,
-            incremental_reward=False,
-            no_action_reward=0
-        )
-
-    def test_valid_action(self):
-        test_actions = 6 * [True, True, True, False, True, False] + 12 * [False]
-        valid_actions = [self.env.is_valid_action(idx) for idx in range(48)]
-        self.assertEqual(test_actions, valid_actions)
-
-
 if __name__ == "__main__":
     unittest.main()

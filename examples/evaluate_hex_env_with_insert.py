@@ -1,9 +1,7 @@
 import torch
 from stable_baselines3 import PPO
-from stable_baselines3.common.env_util import make_vec_env
 from envs.hex_env_with_insert import HexEnv
 from src.render import Renderer
-from stable_baselines3.common.utils import obs_as_tensor
 import matplotlib.pyplot as plt
 import os
 from src.utils import load_yaml_config
@@ -27,7 +25,50 @@ def initialize_environment():
     return env
 
 
-input_folder = "experiments/hex_env_with_insert/eps-0-05"
+def get_action_distribution(obs):
+    template_halfedges = env.index_to_halfedge
+    print("Template : ", template_halfedges)
+    with torch.no_grad():
+        dist = model.policy.get_distribution(obs)
+    probs = dist.distribution.probs[0]
+    plot_distribution(probs)
+    return dist
+
+
+def step_environment(dist):
+    action = dist.get_actions()
+    action = action.cpu().numpy()
+    action_hidx = action[0] // 6
+    action_type = action[0] % 6
+
+    if action_hidx < len(env.index_to_halfedge):
+        action_halfedge = env.index_to_halfedge[action_hidx]
+    else:
+        action_halfedge = None
+
+    print("Selected action : ", action[0])
+    print("\tHalfedge: ", action_halfedge, " \tType: ", action_type)
+    obs, reward, done, truncated, info = env.step(action[0])
+    print("Reward : ", reward)
+    print("Terminated : ", done)
+    return obs_as_tensor(obs)
+
+
+def obs_as_tensor(obs):
+    _obs = {}
+    for k, v in obs.items():
+        v = torch.tensor(v).unsqueeze(0)
+        _obs[k] = v
+    return _obs
+
+
+def save_figure():
+    figname = "step-" + str(step) + ".png"
+    output_file = os.path.join(input_folder, figname)
+    renderer.fig.savefig(output_file)
+
+
+input_folder = "experiments/hex_env_with_insert/entropy-0-1"
 
 checkpoint = os.path.join(input_folder, "best_model.zip")
 model = PPO.load(checkpoint)
@@ -35,33 +76,15 @@ model = PPO.load(checkpoint)
 config_fn = os.path.join(input_folder, "config.yml")
 config = load_yaml_config(config_fn)
 
-env = make_vec_env(initialize_environment, 1)
+env = initialize_environment()
+obs = obs_as_tensor(env._get_obs())
+step = 0
 
-extracted_env = env.envs[0].env
-renderer = Renderer(extracted_env.graph, extracted_env.graph.vertex_coordinates)
+renderer = Renderer(env.graph, env.graph.vertex_coordinates, label_halfedge=True)
 renderer.plot()
 
-obs, reward, done, _, _ = extracted_env.step(30)
+dist = get_action_distribution(obs)
+obs = step_environment(dist)
 renderer.plot()
-
-# obs = env.reset()
-# obs = obs_as_tensor(obs, torch.device("cpu"))
-# with torch.no_grad():
-#     dist = model.policy.get_distribution(obs)
-# probs = dist.distribution.probs[0]
-# fig = plot_distribution(probs)
-#
-# action = dist.get_actions()
-# action = action.cpu().numpy()
-# action_halfedge = action[0]//6
-# action_type = action[0]%6
-# print("Selected action : ", action[0])
-# print("\tHalfedge: ", action_halfedge, " \tType: ", action_type)
-# obs, reward, done, info = env.step(action)
-# print("Reward : ", reward)
-#
-# extracted_env = env.envs[0].env
-# template_halfedges = extracted_env.index_to_halfedge
-# print("Template : ", template_halfedges)
-# renderer = Renderer(extracted_env.graph, extracted_env.graph.vertex_coordinates)
-# renderer.plot()
+step += 1
+# save_figure()
