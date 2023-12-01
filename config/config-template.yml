@@ -20,6 +20,7 @@ feature_extractor:
   output_features: 128
   number_of_layers: 5
 PPO:
+  discount: 1.0
   ent_coef: 0.1
   vf_coef: 0.1
   clip_range: 0.05
