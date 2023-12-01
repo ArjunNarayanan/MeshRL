@@ -377,10 +377,20 @@ class PolyGraph(nx.DiGraph):
             return False
 
         face_idx = self.face(hidx)
-        if 1 <= k <= self.face_degree(face_idx) - 3:
-            return True
-        else:
+        if not (1 <= k <= self.face_degree(face_idx) - 3):
             return False
+
+        # If the target vertex to connect to is the same as the source vertex,
+        # this is an invalid action
+        current_halfedge = hidx
+        current_source = self.source_vertex(hidx)
+        for steps in range(k):
+            current_halfedge = self.next_halfedge(current_halfedge)
+        target_vertex = self.target_vertex(current_halfedge)
+        if current_source == target_vertex:
+            return False
+
+        return True
 
     def insert_halfedge(self, hidx, k):
         """insert an edge from source of `hidx` to target of halfedge that is k `next` steps away"""
