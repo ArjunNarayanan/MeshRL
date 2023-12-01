@@ -38,13 +38,8 @@ def get_action_distribution(obs):
 def step_environment(dist):
     action = dist.get_actions()
     action = action.cpu().numpy()
-    action_hidx = action[0] // 6
-    action_type = action[0] % 6
 
-    if action_hidx < len(env.index_to_halfedge):
-        action_halfedge = env.index_to_halfedge[action_hidx]
-    else:
-        action_halfedge = None
+    action_halfedge, action_type = env._linear_action_index_to_halfedge_and_action(action[0])
 
     print("Selected action : ", action[0])
     print("\tHalfedge: ", action_halfedge, " \tType: ", action_type)
@@ -68,7 +63,7 @@ def save_figure():
     renderer.fig.savefig(output_file)
 
 
-input_folder = "experiments/hex_env_with_insert/entropy-0-1"
+input_folder = "experiments/hex_env_with_insert/eps-0-05"
 
 checkpoint = os.path.join(input_folder, "best_model.zip")
 model = PPO.load(checkpoint)

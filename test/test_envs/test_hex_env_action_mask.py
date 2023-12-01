@@ -58,7 +58,7 @@ class TestSequentialActionMask(unittest.TestCase):
         test_twin = list(zip(test_twin, test_tags))
         self.assertEqual(twin_edges, test_twin)
 
-    def test_mask(self):
+    def test_valid_actions(self):
         t = True
         f = False
 
@@ -101,6 +101,40 @@ class TestSequentialActionMask(unittest.TestCase):
         test_col9 = [t, t, t, f, t, f]
         col9 = [self.env.is_valid_action(idx) for idx in range(54, 60)]
         self.assertEqual(col9, test_col9)
+
+    def test_action_mask(self):
+        t = True
+        f = False
+
+        test_col0 = [t, f, f, f, t, f]
+        test_col1 = [t, f, f, f, t, f]
+        test_col2 = [t, f, f, f, t, f]
+        test_col3 = [t, f, f, f, t, t]
+        test_col4 = [t, t, t, f, t, t]
+        test_col5 = [t, t, t, f, t, f]
+        test_col6 = [t, t, t, f, t, f]
+        test_col7 = [t, t, t, f, t, f]
+        test_col8 = [t, t, t, f, t, f]
+        test_col9 = [t, t, t, f, t, f]
+        _mask = np.concatenate(
+            [
+                test_col0,
+                test_col1,
+                test_col2,
+                test_col3,
+                test_col4,
+                test_col5,
+                test_col6,
+                test_col7,
+                test_col8,
+                test_col9
+            ]
+        )
+        test_mask = np.zeros(_mask.shape)
+        test_mask[~_mask] = -np.inf
+
+        action_mask = self.env._get_action_mask()
+        self.assertTrue((test_mask == action_mask).all())
 
 
 if __name__ == "__main__":

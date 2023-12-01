@@ -94,7 +94,8 @@ class HexEnv(gym.Env):
                 "features": Box(low=0, high=4, shape=(self.template_size, self.num_features)),
                 "next": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
                 "previous": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
-                "twin": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64)
+                "twin": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
+                "mask": Box(low=-np.inf, high=0, shape=(self.template_size * self.num_actions_per_halfedge,)),
             }
         )
 
@@ -181,7 +182,7 @@ class HexEnv(gym.Env):
         self.halfedge_to_index = {halfedge: idx for idx, halfedge in enumerate(self.index_to_halfedge)}
 
     def _get_feature_matrix(self):
-        matrix = np.zeros((self.template_size, self.num_features))
+        matrix = np.zeros((self.template_size, self.num_features), dtype=np.float32)
         for order, hidx in enumerate(self.index_to_halfedge):
             vidx = self.graph.source_vertex(hidx, tag=False)
             vertex_degree = self.graph.vertex_degree(vidx)
@@ -228,6 +229,12 @@ class HexEnv(gym.Env):
                 twin_edges[idx] = twin_idx
         return twin_edges
 
+    def _get_action_mask(self):
+        total_num_actions = self.template_size * self.num_actions_per_halfedge
+        action_mask = np.array([0 if self.is_valid_action(idx) else -np.inf for idx in range(total_num_actions)],
+                               dtype=np.float32)
+        return action_mask
+
     def _get_obs(self):
         if self.exception_occurred:
             return self._get_blank_obs()
@@ -236,7 +243,8 @@ class HexEnv(gym.Env):
                 "features": self._get_feature_matrix(),
                 "next": self._get_next_edges(),
                 "previous": self._get_previous_edges(),
-                "twin": self._get_twin_edges()
+                "twin": self._get_twin_edges(),
+                "mask": self._get_action_mask()
             }
             return obs
 
@@ -245,11 +253,13 @@ class HexEnv(gym.Env):
         next_edges = np.arange(self.template_size)
         prev_edges = np.arange(self.template_size)
         twin_edges = np.arange(self.template_size)
+        mask = np.zeros(self.template_size * self.num_actions_per_halfedge)
         obs = {
             "features": features,
             "next": next_edges,
             "previous": prev_edges,
-            "twin": twin_edges
+            "twin": twin_edges,
+            "mask": mask
         }
         return obs
 
@@ -468,16 +478,15 @@ class HexEnv(gym.Env):
 
         try:
             self._step_halfedge_action(halfedge, local_action)
+            # update the template after step:
+            halfedges = self.graph.halfedge_list()
+            self._build_template(halfedges)
         except Exception as e:
             self.exception_occurred = True
             print("\n\n\tENCOUNTERED ENVIRONMENT EXCPETION\n\n")
             self._log_exception()
 
         self.num_actions += 1
-
-        # update the template after step:
-        halfedges = self.graph.halfedge_list()
-        self._build_template(halfedges)
 
         terminated = self.is_terminated()
         observation = self._get_obs()

@@ -145,7 +145,7 @@ class TestHexEnv(unittest.TestCase):
 
     def test_feature_matrix(self):
         matrix = self.env._get_feature_matrix()
-        test_matrix = np.zeros((self.env.template_size, 5))
+        test_matrix = np.zeros((self.env.template_size, 5), dtype=np.float32)
         test_matrix[:6, :] = [
             2 / 3,
             3,
@@ -168,7 +168,7 @@ class TestHexEnvTemplate3(unittest.TestCase):
 
     def test_feature_matrix(self):
         matrix = self.env._get_feature_matrix()
-        test_matrix = np.zeros((self.env.template_size, 5))
+        test_matrix = np.zeros((self.env.template_size, 5), dtype=np.float32)
         test_matrix[:6, :] = [
             2 / 3,
             3,
@@ -215,7 +215,7 @@ class TestObs4(unittest.TestCase):
         self.assertTrue(index_to_halfedge == self.env.index_to_halfedge)
 
     def test_feature_matrix(self):
-        test_matrix = np.zeros((self.env.template_size, 5))
+        test_matrix = np.zeros((self.env.template_size, 5), dtype=np.float32)
         test_matrix[:2, :] = [2 / 3, 3, 4 / 3, 3, 1]
         test_matrix[2:, :] = [3 / 3, 3, 4 / 3, 3, 1]
         matrix = self.obs["features"]
@@ -258,7 +258,7 @@ class TestObs5(unittest.TestCase):
         self.assertTrue(index_to_halfedge == self.env.index_to_halfedge)
 
     def test_feature_matrix(self):
-        test_matrix = np.zeros((self.env.template_size, 5))
+        test_matrix = np.zeros((self.env.template_size, 5), dtype=np.float32)
         test_matrix[:2, :] = [2 / 3, 3, 4 / 3, 3, 1]
         test_matrix[2:, :] = [3 / 3, 3, 4 / 3, 3, 1]
         matrix = self.obs["features"]
@@ -306,7 +306,7 @@ class TestActionSequence(unittest.TestCase):
         self.assertTrue(index_to_halfedge == self.env.index_to_halfedge)
 
     def test_feature_matrix(self):
-        test_matrix = np.zeros((self.env.template_size, 5))
+        test_matrix = np.zeros((self.env.template_size, 5), dtype=np.float32)
         test_matrix[:13, 0] = [1, 2 / 3, 3 / 6, 2 / 3, 1, 1, 3 / 6, 3 / 6, 2 / 3, 1, 3 / 4, 3 / 4, 2 / 3]
         test_matrix[:13, 1] = [3, 3, 6, 3, 3, 3, 6, 6, 3, 3, 4, 4, 3]
 
