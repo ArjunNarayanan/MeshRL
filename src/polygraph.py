@@ -608,6 +608,12 @@ class PolyGraph(nx.DiGraph):
         if self.vertex_degree(source_vertex) <= 2 or self.vertex_degree(target_vertex) <= 2:
             return False
 
+        twin_edge = self.twin_halfedge(hidx)
+        current_face = self.face(hidx)
+        twin_face = self.face(twin_edge)
+        if current_face == twin_face:
+            return False
+
         return True
 
     def _halfedges_of_face(self, fidx):
