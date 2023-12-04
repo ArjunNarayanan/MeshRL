@@ -96,6 +96,7 @@ class HexEnv(gym.Env):
                 "previous": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
                 "twin": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
                 "mask": Box(low=-np.inf, high=0, shape=(self.template_size * self.num_actions_per_halfedge,)),
+                "progress": Box(low=0, high=1, shape=(1,))
             }
         )
 
@@ -235,6 +236,9 @@ class HexEnv(gym.Env):
                                dtype=np.float32)
         return action_mask
 
+    def _get_progress(self):
+        return np.array([self.num_actions / self.max_actions])
+
     def _get_obs(self):
         if self.exception_occurred:
             return self._get_blank_obs()
@@ -244,7 +248,8 @@ class HexEnv(gym.Env):
                 "next": self._get_next_edges(),
                 "previous": self._get_previous_edges(),
                 "twin": self._get_twin_edges(),
-                "mask": self._get_action_mask()
+                "mask": self._get_action_mask(),
+                "progress": self._get_progress()
             }
             return obs
 
@@ -259,7 +264,8 @@ class HexEnv(gym.Env):
             "next": next_edges,
             "previous": prev_edges,
             "twin": twin_edges,
-            "mask": mask
+            "mask": mask,
+            "progress": np.array([0])
         }
         return obs
 
