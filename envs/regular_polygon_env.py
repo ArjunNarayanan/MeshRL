@@ -121,9 +121,33 @@ class RegularPolygonEnv(gym.Env):
         )
 
     @staticmethod
+    def get_feature_size():
+        return 5
+
+    @staticmethod
     def get_num_actions_per_halfedge(max_edge_addition_steps):
         # 3 more actions are - delete edge, insert vertex, delete vertex
         return max_edge_addition_steps + 3
+
+    @classmethod
+    def from_config(cls, config):
+        polygon_degree = config["polygon_degree"]
+        template_size = config["template_size"]
+        max_substeps = config["max_substeps"]
+        max_steps = config["max_steps"]
+        incremental_reward = config["incremental_reward"]
+        max_edge_addition_steps = config.get("max_edge_addition_steps", 3)
+        logdir = config.get("logdir", None)
+
+        return cls(
+            polygon_degree,
+            template_size,
+            max_substeps,
+            max_steps,
+            incremental_reward,
+            logdir=logdir,
+            max_edge_addition_steps=max_edge_addition_steps
+        )
 
     def _vertex_score(self, vidx):
         vertex_degree = self.graph.vertex_degree(vidx)
@@ -165,10 +189,6 @@ class RegularPolygonEnv(gym.Env):
     def _build_template(self):
         self.index_to_halfedge = self.graph.knn_halfedges(self.template_center, self.template_size)
         self.halfedge_to_index = {halfedge: idx for idx, halfedge in enumerate(self.index_to_halfedge)}
-
-    @staticmethod
-    def get_feature_size():
-        return 5
 
     def _get_feature_matrix(self):
         matrix = np.zeros((self.template_size, self.num_features), dtype=np.float32)
@@ -455,6 +475,8 @@ class RegularPolygonEnv(gym.Env):
         if self.exception_occurred:
             return True
 
+        return False
+
     def step(self, linear_action_index):
 
         if self.num_substeps >= self.max_substeps:
@@ -504,7 +526,7 @@ class RegularPolygonEnv(gym.Env):
         self.action_sequence = []
         self.exception_occurred = False
 
-        self._select_halfedge_template_center(self.graph.halfedge_list())
+        self.template_center = self._select_halfedge_template_center(self.graph.halfedge_list())
         self._build_template()
 
         self.num_substeps = 0
@@ -522,19 +544,15 @@ class RegularPolygonEnv(gym.Env):
 
     def reset(self, seed=None, options=None):
         if self.exception_occurred:
-            self._hard_reset()
-            return
+            return self._hard_reset()
 
         if self.num_steps >= self.max_steps:
-            self._hard_reset()
-            return
+            return self._hard_reset()
 
         if self.score == 0:
-            self._hard_reset()
-            return
+            return self._hard_reset()
 
-        self._soft_reset()
-        return
+        return self._soft_reset()
 
     def _log_exception(self):
         exception_filename = str(uuid.uuid4()) + ".pkl"
@@ -545,14 +563,3 @@ class RegularPolygonEnv(gym.Env):
             pickle.dump(output_data, output_file)
 
         print("\n\n\tLOGGED EXCEPTED ENV TO : ", exception_filepath, "\n\n\t")
-
-
-if __name__ == "__main__":
-    env = RegularPolygonEnv(
-        6,
-        template_size=6,
-        max_substeps=10,
-        max_steps=1,
-        incremental_reward=True,
-        logdir="",
-    )
