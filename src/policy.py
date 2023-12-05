@@ -1,6 +1,5 @@
 from stable_baselines3.common.policies import ActorCriticPolicy
 import torch
-from stable_baselines3 import PPO
 
 
 class CustomNetwork(torch.nn.Module):
@@ -19,18 +18,25 @@ class CustomNetwork(torch.nn.Module):
         )
         # value network
         self.value_net = torch.nn.Sequential(
-            torch.nn.Linear(input_features, output_features),
+            torch.nn.Linear(input_features+1, output_features), # add +1 to accommodate progress info
             torch.nn.LeakyReLU()
         )
 
     def forward_actor(self, features):
         return self.policy_net(features)
 
-    def forward_critic(self, features):
+    @staticmethod
+    def _reduce_latent_vf(latent_vf):
+        return latent_vf.mean(dim=-2)
+
+    def forward_critic(self, features, obs):
+        progress = obs["progress"]
+        features = self._reduce_latent_vf(features)
+        features = torch.cat([features, progress], dim=1)
         return self.value_net(features)
 
-    def forward(self, features):
-        return self.forward_actor(features), self.forward_critic(features)
+    def forward(self, features, obs):
+        return self.forward_actor(features), self.forward_critic(features, obs)
 
 
 class CustomActorCriticPolicy(ActorCriticPolicy):
@@ -75,8 +81,8 @@ class CustomActorCriticPolicy(ActorCriticPolicy):
 
     def predict_values(self, obs):
         features = self.features_extractor(obs)
-        latent_vf = self.mlp_extractor.forward_critic(features)
-        latent_vf = self._reduce_latent_vf(latent_vf)
+        latent_vf = self.mlp_extractor.forward_critic(features, obs)
+        # latent_vf = self._reduce_latent_vf(latent_vf)
         values = self.value_net(latent_vf)
         return values
 
@@ -90,13 +96,13 @@ class CustomActorCriticPolicy(ActorCriticPolicy):
 
     def evaluate_actions(self, obs, actions):
         features = self.features_extractor(obs)
-        latent_pi, latent_vf = self.mlp_extractor(features)
+        latent_pi, latent_vf = self.mlp_extractor(features, obs)
 
         mask = obs["mask"]
         distribution = self._get_masked_action_dist_from_latent(latent_pi, mask)
         log_prob = distribution.log_prob(actions)
 
-        latent_vf = self._reduce_latent_vf(latent_vf)
+        # latent_vf = self._reduce_latent_vf(latent_vf)
         values = self.value_net(latent_vf)
         entropy = distribution.entropy()
         return values, log_prob, entropy
@@ -104,9 +110,9 @@ class CustomActorCriticPolicy(ActorCriticPolicy):
     def forward(self, obs, deterministic=False):
         features = self.features_extractor(obs)
 
-        latent_pi, latent_vf = self.mlp_extractor(features)
+        latent_pi, latent_vf = self.mlp_extractor(features, obs)
 
-        latent_vf = self._reduce_latent_vf(latent_vf)
+        # latent_vf = self._reduce_latent_vf(latent_vf)
         values = self.value_net(latent_vf)
 
         mask = obs["mask"]

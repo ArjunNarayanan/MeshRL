@@ -34,9 +34,10 @@ if __name__ == "__main__":
     parser.add_argument("-config", required=True)
     args = parser.parse_args()
 
-    config = load_yaml_config(args.config)
-
+    config_fn = args.config
+    config = load_yaml_config(config_fn)
     num_envs = args.num_envs
+
     if num_envs > 1:
         env = make_vec_env(initialize_environment, num_envs)
     else:
@@ -45,7 +46,7 @@ if __name__ == "__main__":
     template_size = config["environment"]["template_size"]
     num_actions = template_size * HexEnv.get_num_actions_per_halfedge()
 
-    default_output_dir = os.path.dirname(args.config)
+    default_output_dir = os.path.dirname(config_fn)
     output_dir = config.get("output_dir", default_output_dir)
     make_output_dir_if_necessary(output_dir)
     print("\n\tUSING OUTPUT DIR: ", output_dir, "\n")
