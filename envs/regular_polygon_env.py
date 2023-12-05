@@ -117,6 +117,7 @@ class RegularPolygonEnv(gym.Env):
                 "previous": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
                 "twin": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
                 "mask": Box(low=-np.inf, high=0, shape=(self.total_num_actions_in_template,)),
+                "progress": Box(low=0, high=1, shape=(1,))
             }
         )
 
@@ -275,6 +276,9 @@ class RegularPolygonEnv(gym.Env):
 
         return True
 
+    def _get_progress(self):
+        return np.array([self.num_substeps / self.max_substeps])
+
     def _get_blank_obs(self):
         features = np.zeros((self.template_size, self.num_features))
         next_edges = np.arange(self.template_size)
@@ -286,7 +290,8 @@ class RegularPolygonEnv(gym.Env):
             "next": next_edges,
             "previous": prev_edges,
             "twin": twin_edges,
-            "mask": mask
+            "mask": mask,
+            "progress": np.array([0.0])
         }
         return obs
 
@@ -299,7 +304,8 @@ class RegularPolygonEnv(gym.Env):
                 "next": self._get_next_edges(),
                 "previous": self._get_previous_edges(),
                 "twin": self._get_twin_edges(),
-                "mask": self._get_action_mask()
+                "mask": self._get_action_mask(),
+                "progress": self._get_progress()
             }
             return obs
 
