@@ -497,14 +497,14 @@ class RegularPolygonEnv(gym.Env):
             self._update_halfedge_template_center()
             self._build_template()
             terminated = self.is_terminated()
+            observation = self._get_obs()
         except Exception as e:
             self.exception_occurred = True
             print("\n\n\tENCOUNTERED ENVIRONMENT EXCPETION\n\n")
             self._log_exception()
             terminated = True
+            observation = self._get_obs()
 
-
-        observation = self._get_obs()
 
         if not self.incremental_reward:
             if not terminated:
