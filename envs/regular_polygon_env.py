@@ -486,12 +486,13 @@ class RegularPolygonEnv(gym.Env):
     def step(self, linear_action_index):
 
         if self.num_substeps >= self.max_substeps:
-            print("WARNING : NUM SUBSTEPS > MAX SUPSTEPS!!")  # this should not happen
+            print("WARNING : NUM SUBSTEPS > MAX SUBSTEPS!!")  # this should not happen
 
         halfedge, local_action = self._linear_action_index_to_halfedge_and_action(linear_action_index)
 
         try:
             self._step_halfedge_action(halfedge, local_action)
+            self.num_substeps += 1
             # update the template center after step
             self._update_halfedge_template_center()
             self._build_template()
@@ -502,7 +503,7 @@ class RegularPolygonEnv(gym.Env):
             self._log_exception()
             terminated = True
 
-        self.num_substeps += 1
+
         observation = self._get_obs()
 
         if not self.incremental_reward:
