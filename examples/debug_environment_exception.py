@@ -17,7 +17,7 @@ renderer.plot()
 
 actions = data["actions"]
 
-for idx, action in enumerate(actions[:-1]):
+for idx, action in enumerate(actions[:-2]):
     print("Index : ", idx)
     halfedge, action_type = action
     env._step_halfedge_action(halfedge, action_type)
@@ -28,50 +28,3 @@ for idx, action in enumerate(actions[:-1]):
     renderer.plot()
 
 graph = env.graph
-
-# graph.insert_halfedge(2,1)
-# renderer.plot()
-#
-# graph.insert_halfedge(7,2)
-# renderer.plot()
-#
-# graph.insert_vertex(8)
-# renderer.plot()
-#
-# graph.insert_vertex(8)
-# renderer.plot()
-#
-# graph.insert_halfedge(5, 2)
-# renderer.plot()
-#
-# graph.insert_vertex(13)
-# renderer.plot()
-#
-# graph.insert_vertex(5)
-# renderer.plot()
-#
-# graph.insert_halfedge(10, 1)
-# renderer.plot()
-#
-# graph.insert_vertex(12)
-# renderer.plot()
-#
-# graph.insert_halfedge(13,1)
-# renderer.plot()
-#
-# graph.delete_halfedge(21)
-# renderer.plot()
-#
-# graph.delete_halfedge(8)
-# renderer.plot()
-#
-# # graph.insert_vertex(0)
-# # graph.insert_vertex(7)
-# # graph.insert_halfedge(10, 2)
-# # graph.insert_vertex(6)
-# # graph.insert_halfedge(13,2)
-# # graph.delete_halfedge(13)
-# # graph.insert_vertex(3)
-# # graph.insert_halfedge(15, 2)
-#
-#

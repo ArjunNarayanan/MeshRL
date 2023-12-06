@@ -39,10 +39,14 @@ def get_action_distribution(obs, plot=False):
 def step_environment(dist):
     action = dist.get_actions()
     action = action.cpu().numpy()
+    linear_action = action[0]
+    action_probability = dist.distribution.probs[0, linear_action].item()
 
     action_halfedge, action_type = env._linear_action_index_to_halfedge_and_action(action[0])
 
+    print("Step : ", env.num_steps, "\tSubstep : ", env.num_substeps)
     print("Selected action : ", action[0])
+    print("Selected action probability : ", action_probability)
     print("\tHalfedge: ", action_halfedge, " \tType: ", action_type)
     obs, reward, done, truncated, info = env.step(action[0])
     print("Reward : ", reward)
@@ -73,7 +77,7 @@ def make_output_folder(dir):
         os.makedirs(dir)
 
 
-input_folder = "experiments/regular-polygon/poly-20"
+input_folder = "experiments/regular-polygon/poly-10"
 fig_output_folder = os.path.join(input_folder, "figures")
 make_output_folder(fig_output_folder)
 
@@ -92,6 +96,6 @@ step = 0
 dist = get_action_distribution(obs)
 obs = step_environment(dist)
 renderer.plot()
-
 step += 1
+
 # save_figure()

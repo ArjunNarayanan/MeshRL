@@ -571,7 +571,7 @@ class PolyGraph(nx.DiGraph):
             return False
 
         vidx = self.source_vertex(hidx)
-        if self.is_user_defined_vertex(hidx):
+        if self.is_user_defined_vertex(vidx):
             return False
 
         if self.vertex_degree(vidx) > 2:
@@ -579,6 +579,12 @@ class PolyGraph(nx.DiGraph):
 
         fidx = self.face(hidx)
         if self.face_degree(fidx) < 4:
+            return False
+
+        prev_hidx = self.previous_halfedge(hidx)
+        prev_src = self.source_vertex(prev_hidx)
+        curr_target = self.target_vertex(hidx)
+        if prev_src == curr_target:
             return False
 
         if not self.halfedge_on_boundary(hidx):
