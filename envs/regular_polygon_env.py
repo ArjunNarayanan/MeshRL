@@ -463,12 +463,16 @@ class RegularPolygonEnv(gym.Env):
             self._step_delete_source_vertex(halfedge)
 
     def _update_halfedge_template_center(self):
+        self.template_center = self._select_halfedge_template_center(self.graph.halfedge_list())
+        ########################################################################################
+        # USE BELOW CODE FOR INCREMENTAL UPDATES
         # if the previous template center does not exist (i.e. it was deleted in the previous step),
         # randomly select between next/previous halfedge in the current template
-        if not self.graph.is_halfedge(self.template_center):
-            idx = np.random.choice([1, 2])
-            self.template_center = self.index_to_halfedge[idx]
-            assert self.graph.is_halfedge(self.template_center)
+        # if not self.graph.is_halfedge(self.template_center):
+        #     idx = np.random.choice([1, 2])
+        #     self.template_center = self.index_to_halfedge[idx]
+        #     assert self.graph.is_halfedge(self.template_center)
+        ########################################################################################
 
     def is_terminated(self):
         if self.num_substeps >= self.max_substeps:
