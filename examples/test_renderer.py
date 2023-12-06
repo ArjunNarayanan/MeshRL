@@ -1,32 +1,11 @@
 from envs.regular_polygon_env import RegularPolygonEnv
 from src.render import Renderer
 import numpy as np
+from src.polygraph import PolyGraph
 
-env = RegularPolygonEnv(
-    8,
-    10,
-    3,
-    2,
-    True,
-    "",
-)
-renderer = Renderer(env.graph, env.graph.vertex_coordinates)
-renderer.plot()
-
-# obs1 = env.step(31)
-# renderer.plot()
-#
-# obs2 = env.step(40)
-# renderer.plot()
-#
-# obs3 = env.step(19)
-# renderer.plot()
-#
-# obs4 = env.step(24)
-# renderer.plot()
-#
-# obs5 = env.step(1)
-# renderer.plot()
-#
-# obs6 = env.step(6)
-# renderer.plot()
+face_loops = [
+    [0, 1, 2, 3, 4, 2, 1, 5, 6, 7],
+    [2, 4, 3]
+]
+graph = PolyGraph.from_face_loops(face_loops)
+graph.delete_source_vertex(11)

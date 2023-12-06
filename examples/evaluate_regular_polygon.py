@@ -25,13 +25,14 @@ def initialize_environment():
     return env
 
 
-def get_action_distribution(obs):
+def get_action_distribution(obs, plot=False):
     template_halfedges = env.index_to_halfedge
     print("Template : ", template_halfedges)
     with torch.no_grad():
         dist = model.policy.get_distribution(obs)
     probs = dist.distribution.probs[0]
-    plot_distribution(probs)
+    if plot:
+        plot_distribution(probs)
     return dist
 
 
@@ -46,6 +47,10 @@ def step_environment(dist):
     obs, reward, done, truncated, info = env.step(action[0])
     print("Reward : ", reward)
     print("Terminated : ", done)
+    if done:
+        env.reset()
+        renderer.graph = env.graph
+        renderer.coords = env.graph.vertex_coordinates
     return obs_as_tensor(obs)
 
 
@@ -80,13 +85,13 @@ config = load_yaml_config(config_fn)
 
 env = initialize_environment()
 obs = obs_as_tensor(env._get_obs())
-step = 0
-
-renderer = Renderer(env.graph, env.graph.vertex_coordinates, label_halfedge=True)
+renderer = Renderer(env.graph, env.graph.vertex_coordinates)
 renderer.plot()
 
-# dist = get_action_distribution(obs)
-# obs = step_environment(dist)
-# renderer.plot()
-# step += 1
+step = 0
+dist = get_action_distribution(obs)
+obs = step_environment(dist)
+renderer.plot()
+
+step += 1
 # save_figure()
