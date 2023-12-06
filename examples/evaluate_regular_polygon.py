@@ -51,11 +51,8 @@ def step_environment(dist):
     obs, reward, done, truncated, info = env.step(action[0])
     print("Reward : ", reward)
     print("Terminated : ", done)
-    if done:
-        env.reset()
-        renderer.graph = env.graph
-        renderer.coords = env.graph.vertex_coordinates
-    return obs_as_tensor(obs)
+
+    return obs, done
 
 
 def obs_as_tensor(obs):
@@ -77,7 +74,19 @@ def make_output_folder(dir):
         os.makedirs(dir)
 
 
-input_folder = "experiments/regular-polygon/poly-10"
+def reset_if_done(obs, done):
+    if done:
+        env.reset()
+        renderer.graph = env.graph
+        renderer.coords = env.graph.vertex_coordinates
+        obs = obs_as_tensor(env._get_obs())
+        return obs
+    else:
+        return obs_as_tensor(obs)
+
+
+
+input_folder = "experiments/regular-polygon/poly-10-single-step"
 fig_output_folder = os.path.join(input_folder, "figures")
 make_output_folder(fig_output_folder)
 
@@ -94,8 +103,9 @@ renderer.plot()
 
 step = 0
 dist = get_action_distribution(obs)
-obs = step_environment(dist)
+obs, done = step_environment(dist)
 renderer.plot()
+obs = reset_if_done(obs, done)
 step += 1
 
 # save_figure()

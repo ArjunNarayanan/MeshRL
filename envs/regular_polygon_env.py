@@ -550,16 +550,17 @@ class RegularPolygonEnv(gym.Env):
         return obs, {"score": self.score}
 
     def reset(self, seed=None, options=None):
-        if self.exception_occurred:
-            return self._hard_reset()
-
-        if self.num_steps >= self.max_steps:
-            return self._hard_reset()
-
-        if self.score == 0:
-            return self._hard_reset()
-
-        return self._soft_reset()
+        return self._hard_reset()
+        # if self.exception_occurred:
+        #     return self._hard_reset()
+        #
+        # if self.num_steps >= self.max_steps:
+        #     return self._hard_reset()
+        #
+        # if self.score == 0:
+        #     return self._hard_reset()
+        #
+        # return self._soft_reset()
 
     def _log_exception(self):
         exception_filename = str(uuid.uuid4()) + ".pkl"
