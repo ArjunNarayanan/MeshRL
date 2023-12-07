@@ -63,6 +63,7 @@ if __name__ == "__main__":
     )
 
     ppo_config = config["PPO"]
+    discount = ppo_config["discount"]
     ent_coef = ppo_config["ent_coef"]
     vf_coef = ppo_config["vf_coef"]
     clip_range = ppo_config["clip_range"]
@@ -74,6 +75,7 @@ if __name__ == "__main__":
         env,
         learning_rate=learning_rate,
         batch_size=batch_size,
+        gamma=discount,
         policy_kwargs=policy_kwargs,
         verbose=1,
         ent_coef=ent_coef,

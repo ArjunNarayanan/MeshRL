@@ -478,8 +478,8 @@ class RegularPolygonEnv(gym.Env):
         if self.num_substeps >= self.max_substeps:
             return True
 
-        template_score = sum(self._halfedge_score(hidx) for hidx in self.index_to_halfedge)
-        if template_score == 0:
+        # template_score = sum(self._halfedge_score(hidx) for hidx in self.graph.halfedge_list())
+        if self.score == 0:
             return True
 
         if self.exception_occurred:
