@@ -11,6 +11,7 @@ class Renderer:
             vertex_size=20,
             shrink=0.1,
             label_halfedge=True,
+            label_vertices=True,
     ):
         self.graph = graph
         self.coords = coords
@@ -92,6 +93,8 @@ class Renderer:
 
         self.face_centroids = self._compute_face_centroids()
         self.plot_all_faces()
-        self.plot_vertices()
+
+        if self.label_vertices:
+            self.plot_vertices()
         if self.label_halfedge:
             self.plot_all_halfedges()
