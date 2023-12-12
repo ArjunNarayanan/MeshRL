@@ -10,14 +10,15 @@ class Renderer:
             coords,
             vertex_size=20,
             shrink=0.1,
-            label_halfedge=True,
-            label_vertices=True,
+            label_halfedge=False,
+            label_vertices=False,
     ):
         self.graph = graph
         self.coords = coords
         self.vertex_size = vertex_size
         self.shrink = shrink
         self.label_halfedge = label_halfedge
+        self.label_vertices = label_vertices
 
         fig, ax = plt.subplots()
         self.fig = fig
@@ -85,6 +86,34 @@ class Renderer:
     def plot_all_halfedges(self):
         for idx in self.graph.halfedge_list(tag=False):
             self.plot_halfedge(idx)
+
+    def plot_vertex_scores(self, desired_degree):
+
+        for idx, coord in self.coords.items():
+            degree = self.graph.vertex_degree(idx)
+            desired = desired_degree[idx]
+            score = (degree - desired)
+            x, y = coord
+            if score > 0:
+                self.ax.scatter(x, y, s=self.vertex_size ** 2, color="purple")
+                self.ax.text(x, y, "+" + str(score), color="white", verticalalignment="center",
+                             horizontalalignment="center")
+            elif score < 0:
+                self.ax.scatter(x, y, s=self.vertex_size ** 2, color="red")
+                self.ax.text(x, y, str(score), color="white", verticalalignment="center", horizontalalignment="center")
+
+    def plot_face_scores(self, face_desired_degree):
+        for face_idx in self.graph.face_list(tag=False):
+            face_degree = self.graph.face_degree(face_idx)
+            score = (face_degree - face_desired_degree)
+            x, y = self.face_centroids[face_idx]
+            if score > 0:
+                self.ax.scatter(x, y, s=self.vertex_size ** 2, color="blue")
+                self.ax.text(x, y, "+" + str(score), color="white", verticalalignment="center",
+                             horizontalalignment="center")
+            elif score < 0:
+                self.ax.scatter(x, y, s=self.vertex_size ** 2, color="green")
+                self.ax.text(x, y, str(score), color="white", verticalalignment="center", horizontalalignment="center")
 
     def plot(self):
         self.ax.clear()

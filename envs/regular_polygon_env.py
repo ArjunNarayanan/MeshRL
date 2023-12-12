@@ -509,7 +509,6 @@ class RegularPolygonEnv(gym.Env):
             terminated = True
             observation = self._get_obs()
 
-
         if not self.incremental_reward:
             if not terminated:
                 self.reward = 0
