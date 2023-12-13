@@ -91,6 +91,7 @@ if __name__ == "__main__":
     eval_callback = EvalCallback(
         eval_env,
         best_model_save_path=output_dir,
+        n_eval_episodes=100,
         eval_freq=eval_freq,
         deterministic=False,
         render=False

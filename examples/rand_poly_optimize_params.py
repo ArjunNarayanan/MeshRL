@@ -1,0 +1,199 @@
+from typing import Any
+from typing import Dict
+import gymnasium
+import argparse
+import optuna
+from optuna.pruners import MedianPruner
+from optuna.samplers import TPESampler
+from stable_baselines3 import PPO
+from stable_baselines3.common.callbacks import EvalCallback
+from stable_baselines3.common.env_util import make_vec_env
+import torch
+import torch.nn as nn
+import os
+import sys
+
+sys.path.append(os.getcwd())
+from envs.random_polygon_env import RandomPolygonEnv
+from src.feature_extractor import FeatureExtractor
+from src.policy import CustomActorCriticPolicy
+from src.utils import load_yaml_config
+
+
+def initialize_environment():
+    env_config = config["environment"]
+    env = RandomPolygonEnv.from_config(env_config)
+    return env
+
+
+def sample_ppo_params(trial: optuna.Trial) -> Dict[str, Any]:
+    """Sampler for A2C hyperparameters."""
+    gamma = 1.0 - trial.suggest_float("gamma", 0.0001, 0.1, log=True)
+    gae_lambda = 1.0 - trial.suggest_float("gae_lambda", 0.001, 0.2, log=True)
+    ent_coef = trial.suggest_float("ent_coef", 0.00000001, 0.1, log=True)
+
+    max_grad_norm = trial.suggest_float("max_grad_norm", 0.3, 5.0, log=True)
+    learning_rate = trial.suggest_float("lr", 1e-5, 1, log=True)
+
+    n_steps = 2 ** trial.suggest_int("exponent_n_steps", 3, 11)
+    batch_size = 2 ** trial.suggest_int("batch_size", 5, 9)
+
+    ortho_init = trial.suggest_categorical("ortho_init", [False, True])
+    feature_extractor_layers = trial.suggest_int("feature_extractor_layers", 2, 10)
+    feature_extractor_size = 2 ** trial.suggest_int("feature_extractor_size", 5, 10)
+
+    # Display true values.
+    trial.set_user_attr("gamma_", gamma)
+    trial.set_user_attr("gae_lambda_", gae_lambda)
+    trial.set_user_attr("n_steps", n_steps)
+
+    policy_kwargs = dict(
+        features_extractor_class=FeatureExtractor,
+        features_extractor_kwargs=dict(
+            input_features=RandomPolygonEnv.get_feature_size(),
+            output_features=feature_extractor_size,
+            number_of_layers=feature_extractor_layers
+        ),
+        ortho_init=ortho_init,
+    )
+
+    return {
+        "n_steps": n_steps,
+        "batch_size": batch_size,
+        "gamma": gamma,
+        "gae_lambda": gae_lambda,
+        "learning_rate": learning_rate,
+        "ent_coef": ent_coef,
+        "max_grad_norm": max_grad_norm,
+        "policy_kwargs": policy_kwargs,
+    }
+
+
+class TrialEvalCallback(EvalCallback):
+    """Callback used for evaluating and reporting a trial."""
+
+    def __init__(
+            self,
+            eval_env,
+            trial: optuna.Trial,
+            n_eval_episodes: int = 100,
+            eval_freq: int = 10000,
+            deterministic: bool = False,
+            verbose: int = 0,
+    ):
+        super().__init__(
+            eval_env=eval_env,
+            n_eval_episodes=n_eval_episodes,
+            eval_freq=eval_freq,
+            deterministic=deterministic,
+            verbose=verbose,
+        )
+        self.trial = trial
+        self.eval_idx = 0
+        self.is_pruned = False
+
+    def _on_step(self) -> bool:
+        if self.eval_freq > 0 and self.n_calls % self.eval_freq == 0:
+            super()._on_step()
+            self.eval_idx += 1
+            self.trial.report(self.last_mean_reward, self.eval_idx)
+            # Prune trial if needed.
+            if self.trial.should_prune():
+                self.is_pruned = True
+                return False
+        return True
+
+
+def objective(trial: optuna.Trial) -> float:
+    kwargs = DEFAULT_HYPERPARAMS.copy()
+    # Sample hyperparameters.
+    kwargs.update(sample_ppo_params(trial))
+
+    # Create the RL model.
+    model = PPO(
+        **kwargs
+    )
+    # Create env used for evaluation.
+    eval_env = make_vec_env(initialize_environment, 1)
+    # Create the callback that will periodically evaluate and report the performance.
+    eval_callback = TrialEvalCallback(
+        eval_env,
+        trial,
+        n_eval_episodes=N_EVAL_EPISODES,
+        eval_freq=EVAL_FREQ,
+        deterministic=False
+    )
+
+    nan_encountered = False
+    try:
+        model.learn(N_TIMESTEPS, callback=eval_callback)
+    except AssertionError as e:
+        # Sometimes, random hyperparams can generate NaN.
+        print(e)
+        nan_encountered = True
+    finally:
+        # Free memory.
+        model.env.close()
+        eval_env.close()
+
+    # Tell the optimizer that the trial failed.
+    if nan_encountered:
+        return float("nan")
+
+    if eval_callback.is_pruned:
+        raise optuna.exceptions.TrialPruned()
+
+    return eval_callback.last_mean_reward
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Optimize PPO hyperparams with Optuna")
+    parser.add_argument("-num_envs", default=1, type=int)
+    parser.add_argument("-config", required=True)
+    args = parser.parse_args()
+
+    num_envs = args.num_envs
+    config_filename = args.config
+    config = load_yaml_config(config_filename)
+
+    N_TRIALS = 100
+    N_STARTUP_TRIALS = 5
+    N_EVALUATIONS = 100
+    N_TIMESTEPS = int(config["total_timesteps"])
+    EVAL_FREQ = int(N_TIMESTEPS / N_EVALUATIONS)
+    N_EVAL_EPISODES = 100
+    NUM_ENVS = 20
+
+    env = make_vec_env(initialize_environment, num_envs)
+    DEFAULT_HYPERPARAMS = {
+        "policy": CustomActorCriticPolicy,
+        "env": env,
+    }
+
+    # Set pytorch num threads to 1 for faster training.
+    torch.set_num_threads(1)
+
+    sampler = TPESampler(n_startup_trials=N_STARTUP_TRIALS)
+    # Do not prune before 1/3 of the max budget is used.
+    pruner = MedianPruner(n_startup_trials=N_STARTUP_TRIALS, n_warmup_steps=N_EVALUATIONS // 3)
+
+    study = optuna.create_study(sampler=sampler, pruner=pruner, direction="maximize")
+    try:
+        study.optimize(objective, n_trials=N_TRIALS, timeout=600)
+    except KeyboardInterrupt:
+        pass
+
+    print("Number of finished trials: ", len(study.trials))
+
+    print("Best trial:")
+    trial = study.best_trial
+
+    print("  Value: ", trial.value)
+
+    print("  Params: ")
+    for key, value in trial.params.items():
+        print("    {}: {}".format(key, value))
+
+    print("  User attrs:")
+    for key, value in trial.user_attrs.items():
+        print("    {}: {}".format(key, value))
