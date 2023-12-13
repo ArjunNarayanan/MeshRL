@@ -9,7 +9,7 @@
 ########################################################################################
 
 environment:
-  name: RegularPolygonEnv
+  name: RandomPolygonEnv
   polygon_degree: 20
   template_size: 20
   max_steps: 40
