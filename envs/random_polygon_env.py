@@ -309,32 +309,35 @@ class RandomPolygonEnv(gym.Env):
             self.reward = self.no_action_reward
 
     def _step_insert_vertex(self, hidx):
-        if self.graph.halfedge_on_boundary(hidx):
-            face_idx = self.graph.face(hidx)
-            face_degree = self.graph.face_degree(face_idx)
-            new_vertex_idx = self.graph.insert_vertex(hidx, tag=False)
-            self.vertex_desired_degree[new_vertex_idx] = self.boundary_vertex_desired_degree
+        if self.graph.is_halfedge(hidx):
+            if self.graph.halfedge_on_boundary(hidx):
+                face_idx = self.graph.face(hidx)
+                face_degree = self.graph.face_degree(face_idx)
+                new_vertex_idx = self.graph.insert_vertex(hidx, tag=False)
+                self.vertex_desired_degree[new_vertex_idx] = self.boundary_vertex_desired_degree
 
-            face_reward = abs(face_degree - self.face_desired_degree) - abs(face_degree + 1 - self.face_desired_degree)
-            vertex_reward = 0 - abs(2 - self.boundary_vertex_desired_degree)
+                face_reward = abs(face_degree - self.face_desired_degree) - abs(face_degree + 1 - self.face_desired_degree)
+                vertex_reward = 0 - abs(2 - self.boundary_vertex_desired_degree)
+            else:
+                face_idx = self.graph.face(hidx)
+                face_degree = self.graph.face_degree(face_idx)
+
+                twin_hidx = self.graph.twin_halfedge(hidx)
+                twin_face = self.graph.face(twin_hidx)
+                twin_face_degree = self.graph.face_degree(twin_face)
+
+                new_vertex_idx = self.graph.insert_vertex(hidx, tag=False)
+                self.vertex_desired_degree[new_vertex_idx] = self.interior_vertex_desired_degree
+
+                face_reward = (abs(face_degree - self.face_desired_degree) +
+                               abs(twin_face_degree - self.face_desired_degree)) - \
+                              (abs(face_degree + 1 - self.face_desired_degree) +
+                               abs(twin_face_degree + 1 - self.face_desired_degree))
+                vertex_reward = 0 - abs(2 - self.interior_vertex_desired_degree)
+
+            self._update_scores_and_reward(face_reward, vertex_reward)
         else:
-            face_idx = self.graph.face(hidx)
-            face_degree = self.graph.face_degree(face_idx)
-
-            twin_hidx = self.graph.twin_halfedge(hidx)
-            twin_face = self.graph.face(twin_hidx)
-            twin_face_degree = self.graph.face_degree(twin_face)
-
-            new_vertex_idx = self.graph.insert_vertex(hidx, tag=False)
-            self.vertex_desired_degree[new_vertex_idx] = self.interior_vertex_desired_degree
-
-            face_reward = (abs(face_degree - self.face_desired_degree) +
-                           abs(twin_face_degree - self.face_desired_degree)) - \
-                          (abs(face_degree + 1 - self.face_desired_degree) +
-                           abs(twin_face_degree + 1 - self.face_desired_degree))
-            vertex_reward = 0 - abs(2 - self.interior_vertex_desired_degree)
-
-        self._update_scores_and_reward(face_reward, vertex_reward)
+            self.reward = self.no_action_reward
 
     def _step_delete_edge(self, hidx):
         if self.graph.is_valid_delete_halfedge(hidx):

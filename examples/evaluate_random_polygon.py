@@ -92,7 +92,7 @@ def plot_env():
     renderer.plot_vertex_scores(env.vertex_desired_degree)
 
 
-input_folder = "experiments/random-polygon/tri-poly-20"
+input_folder = "experiments/random-polygon/tri-poly-10"
 fig_output_folder = os.path.join(input_folder, "figures")
 make_output_folder(fig_output_folder)
 
