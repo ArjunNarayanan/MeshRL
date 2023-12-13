@@ -27,10 +27,10 @@ def initialize_environment():
 
 
 def sample_ppo_params(trial: optuna.Trial) -> Dict[str, Any]:
-    """Sampler for A2C hyperparameters."""
+    """Sampler for PPO hyperparameters."""
     gamma = 1.0 - trial.suggest_float("gamma", 0.0001, 0.1, log=True)
     gae_lambda = 1.0 - trial.suggest_float("gae_lambda", 0.001, 0.2, log=True)
-    ent_coef = trial.suggest_float("ent_coef", 0.00000001, 0.1, log=True)
+    ent_coef = trial.suggest_float("ent_coef", 0.00000001, 0.5, log=True)
 
     max_grad_norm = trial.suggest_float("max_grad_norm", 0.3, 5.0, log=True)
     learning_rate = trial.suggest_float("lr", 1e-5, 1, log=True)
@@ -59,7 +59,7 @@ def sample_ppo_params(trial: optuna.Trial) -> Dict[str, Any]:
 
     return {
         "n_steps": n_steps,
-        "batch_size": batch_size,
+        # "batch_size": batch_size,
         "gamma": gamma,
         "gae_lambda": gae_lambda,
         "learning_rate": learning_rate,
@@ -156,7 +156,7 @@ if __name__ == "__main__":
     config_filename = args.config
     config = load_yaml_config(config_filename)
 
-    N_TRIALS = 100
+    N_TRIALS = 10
     N_STARTUP_TRIALS = 5
     N_EVALUATIONS = 100
     N_TIMESTEPS = int(config["total_timesteps"])
@@ -179,7 +179,13 @@ if __name__ == "__main__":
 
     study = optuna.create_study(sampler=sampler, pruner=pruner, direction="maximize")
     try:
-        study.optimize(objective, n_trials=N_TRIALS, timeout=600)
+        study.optimize(
+            objective, 
+            n_trials=N_TRIALS, 
+            timeout=600, 
+            n_jobs=1,
+            show_progress_bar=True,
+        )
     except KeyboardInterrupt:
         pass
 
