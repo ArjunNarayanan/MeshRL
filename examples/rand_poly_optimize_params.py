@@ -183,7 +183,7 @@ if __name__ == "__main__":
             objective, 
             n_trials=N_TRIALS, 
             timeout=600, 
-            n_jobs=1,
+            n_jobs=-1,
             show_progress_bar=True,
         )
     except KeyboardInterrupt:
