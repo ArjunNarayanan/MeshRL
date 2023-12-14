@@ -288,6 +288,9 @@ class PolyGraph(nx.DiGraph):
         return self.nodes[twin]["type"] == "boundary"
 
     def is_halfedge(self, hidx):
+        if hidx is None:
+            return False
+
         hidx = self._ensure_tag_form(hidx, self.halfedge_tag)
         return self.has_node(hidx) and self.nodes[hidx].get("type") == "halfedge"
 
