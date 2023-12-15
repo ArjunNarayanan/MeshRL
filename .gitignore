@@ -5,3 +5,4 @@ experiments/
 bash_scripts/
 job_scripts/
 *.out
+*.db

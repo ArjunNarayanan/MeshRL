@@ -443,7 +443,7 @@ class RandomPolygonEnv(gym.Env):
     def step(self, linear_action_index):
 
         if self.num_steps >= self.max_steps:
-            print("WARNING : NUM SUBSTEPS > MAX SUBSTEPS!!")  # this should not happen
+            print("WARNING : NUM STEPS > MAX STEPS!!")  # this should not happen
 
         halfedge, local_action = self._linear_action_index_to_halfedge_and_action(linear_action_index)
         self.action_sequence.append((halfedge, local_action))

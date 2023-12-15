@@ -59,7 +59,7 @@ def sample_ppo_params(trial: optuna.Trial) -> Dict[str, Any]:
 
     return {
         "n_steps": n_steps,
-        # "batch_size": batch_size,
+        "batch_size": batch_size,
         "gamma": gamma,
         "gae_lambda": gae_lambda,
         "learning_rate": learning_rate,
@@ -105,6 +105,13 @@ class TrialEvalCallback(EvalCallback):
 
 
 def objective(trial: optuna.Trial) -> float:
+    env = make_vec_env(initialize_environment, NUM_ENVS)
+    DEFAULT_HYPERPARAMS = {
+        "policy": CustomActorCriticPolicy,
+        "env": env,
+        "verbose": 1,
+    }
+
     kwargs = DEFAULT_HYPERPARAMS.copy()
     # Sample hyperparameters.
     kwargs.update(sample_ppo_params(trial))
@@ -121,7 +128,8 @@ def objective(trial: optuna.Trial) -> float:
         trial,
         n_eval_episodes=N_EVAL_EPISODES,
         eval_freq=EVAL_FREQ,
-        deterministic=False
+        deterministic=False,
+        verbose=1
     )
 
     nan_encountered = False
@@ -152,23 +160,18 @@ if __name__ == "__main__":
     parser.add_argument("-config", required=True)
     args = parser.parse_args()
 
-    num_envs = args.num_envs
+    NUM_ENVS = args.num_envs
     config_filename = args.config
     config = load_yaml_config(config_filename)
 
-    N_TRIALS = 10
+    N_TRIALS = 50
     N_STARTUP_TRIALS = 5
-    N_EVALUATIONS = 100
+    N_EVALUATIONS = 50
     N_TIMESTEPS = int(config["total_timesteps"])
+    print("\nTotal timesteps : ", N_TIMESTEPS, "\n")
     EVAL_FREQ = int(N_TIMESTEPS / N_EVALUATIONS)
     N_EVAL_EPISODES = 100
-    NUM_ENVS = 20
-
-    env = make_vec_env(initialize_environment, num_envs)
-    DEFAULT_HYPERPARAMS = {
-        "policy": CustomActorCriticPolicy,
-        "env": env,
-    }
+    JOBID = os.environ.get("SLURM_JOB_ID")
 
     # Set pytorch num threads to 1 for faster training.
     torch.set_num_threads(1)
@@ -177,13 +180,21 @@ if __name__ == "__main__":
     # Do not prune before 1/3 of the max budget is used.
     pruner = MedianPruner(n_startup_trials=N_STARTUP_TRIALS, n_warmup_steps=N_EVALUATIONS // 3)
 
-    study = optuna.create_study(sampler=sampler, pruner=pruner, direction="maximize")
+    # storage_path = "sqlite:////scratch/anarayan/job_" + JOBID + "/example.db"
+    storage_path = "sqlite:///example.db"
+    print("\nUsing storage : ", storage_path)
+
+    study = optuna.create_study(
+        sampler=sampler, 
+        pruner=pruner, 
+        direction="maximize",
+        storage=storage_path
+    )
     try:
         study.optimize(
             objective, 
-            n_trials=N_TRIALS, 
-            timeout=600, 
-            n_jobs=-1,
+            n_trials=N_TRIALS,
+            n_jobs=1,
             show_progress_bar=True,
         )
     except KeyboardInterrupt:
