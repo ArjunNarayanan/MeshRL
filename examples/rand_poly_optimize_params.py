@@ -8,7 +8,6 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.env_util import make_vec_env
 import torch
-import torch.nn as nn
 import os
 import sys
 

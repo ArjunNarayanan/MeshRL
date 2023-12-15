@@ -6,9 +6,11 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.env_util import make_vec_env
 import torch
-import torch.nn as nn
 import os
 import sys
+from multiprocessing import Manager
+from joblib import parallel_backend
+import shutil
 
 sys.path.append(os.getcwd())
 from envs.random_polygon_env import RandomPolygonEnv
@@ -16,13 +18,14 @@ from src.feature_extractor import FeatureExtractor
 from src.policy import CustomActorCriticPolicy
 from src.utils import load_yaml_config
 
+
 def initialize_environment():
     env_config = config["environment"]
     env = RandomPolygonEnv.from_config(env_config)
     return env
 
 
-def sample_ppo_params(trial: optuna.Trial) -> Dict[str, Any]:
+def sample_ppo_params(trial: optuna.Trial):
     """Sampler for PPO hyperparameters."""
     gamma = 1.0 - trial.suggest_float("gamma", 0.0001, 0.1, log=True)
     gae_lambda = 1.0 - trial.suggest_float("gae_lambda", 0.001, 0.2, log=True)
@@ -65,14 +68,172 @@ def sample_ppo_params(trial: optuna.Trial) -> Dict[str, Any]:
     }
 
 
+class TrialEvalCallback(EvalCallback):
+    """Callback used for evaluating and reporting a trial."""
+
+    def __init__(
+            self,
+            eval_env,
+            trial: optuna.Trial,
+            n_eval_episodes: int = 100,
+            eval_freq: int = 10000,
+            deterministic: bool = False,
+            verbose: int = 0,
+    ):
+        super().__init__(
+            eval_env=eval_env,
+            n_eval_episodes=n_eval_episodes,
+            eval_freq=eval_freq,
+            deterministic=deterministic,
+            verbose=verbose,
+        )
+        self.trial = trial
+        self.eval_idx = 0
+        self.is_pruned = False
+
+    def _on_step(self) -> bool:
+        if self.eval_freq > 0 and self.n_calls % self.eval_freq == 0:
+            super()._on_step()
+            self.eval_idx += 1
+            self.trial.report(self.last_mean_reward, self.eval_idx)
+            # Prune trial if needed.
+            if self.trial.should_prune():
+                self.is_pruned = True
+                return False
+        return True
+
+
 class Objective:
     def __init__(self, gpu_queue):
         self.gpu_queue = gpu_queue
 
     def __call__(self, trial):
+        gpu_id = self.gpu_queue.get()
+
         env = make_vec_env(initialize_environment, NUM_ENVS)
         DEFAULT_HYPERPARAMS = {
             "policy": CustomActorCriticPolicy,
             "env": env,
             "verbose": 1,
         }
+
+        kwargs = DEFAULT_HYPERPARAMS.copy()
+        kwargs.update(sample_ppo_params(trial))
+        kwargs["device"] = torch.device("cuda:" + str(gpu_id))
+
+        model = PPO(**kwargs)
+
+        eval_env = make_vec_env(initialize_environment, 1)
+        eval_callback = TrialEvalCallback(
+            eval_env,
+            trial,
+            n_eval_episodes=N_EVAL_EPISODES,
+            eval_freq=EVAL_FREQ,
+            deterministic=False,
+            verbose=1
+        )
+
+        nan_encountered = False
+        try:
+            model.learn(N_TIMESTEPS, callback=eval_callback)
+        except AssertionError as e:
+            # Sometimes, random hyperparams can generate NaN.
+            print(e)
+            nan_encountered = True
+        finally:
+            # Free memory.
+            model.env.close()
+            eval_env.close()
+
+        # Return GPU ID to the queue
+        self.gpu_queue.put(gpu_id)
+
+        # Tell the optimizer that the trial failed.
+        if nan_encountered:
+            return float("nan")
+
+        if eval_callback.is_pruned:
+            raise optuna.exceptions.TrialPruned()
+
+        return eval_callback.last_mean_reward
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Optimize PPO hyperparams with Optuna")
+    parser.add_argument("-num_envs", default=1, type=int)
+    parser.add_argument("-config", required=True)
+    args = parser.parse_args()
+
+    NUM_ENVS = args.num_envs
+    config_filename = args.config
+    config = load_yaml_config(config_filename)
+
+    N_TRIALS = 50
+    N_STARTUP_TRIALS = 5
+    N_EVALUATIONS = 50
+    N_EVAL_EPISODES = 100
+    N_TIMESTEPS = int(config["total_timesteps"])
+
+    print("\nTotal timesteps : ", N_TIMESTEPS, "\n")
+    EVAL_FREQ = int(N_TIMESTEPS / N_EVALUATIONS)
+    print("\nEval Freq : ", EVAL_FREQ, "\n")
+    JOBID = os.environ.get("SLURM_JOB_ID")
+
+    # Set pytorch num threads to 1 for faster training.
+    # torch.set_num_threads(1)
+
+    sampler = TPESampler(n_startup_trials=N_STARTUP_TRIALS)
+    # Do not prune before 1/3 of the max budget is used.
+    pruner = MedianPruner(n_startup_trials=N_STARTUP_TRIALS, n_warmup_steps=N_EVALUATIONS // 3)
+
+    # This storage path will be unique
+    storage_path = "sqlite:////scratch/anarayan/job_" + JOBID + "/example.db"
+    # storage_path = "sqlite:///example.db"
+    print("\nUsing storage : ", storage_path)
+
+    study = optuna.create_study(
+        sampler=sampler,
+        pruner=pruner,
+        direction="maximize",
+        storage=storage_path
+    )
+
+    NUM_GPUS = torch.cuda.device_count()
+    print("NUM GPUs : ", NUM_GPUS)
+
+    with Manager() as manager:
+        gpu_queue = manager.Queue()
+        for idx in range(NUM_GPUS):
+            gpu_queue.put(idx)
+
+        with parallel_backend("multiprocessing", n_jobs=NUM_GPUS):
+            try:
+                study.optimize(
+                    Objective(gpu_queue),
+                    n_trials=N_TRIALS,
+                    n_jobs=NUM_GPUS,
+                    show_progress_bar=True,
+                )
+            except KeyboardInterrupt:
+                pass
+
+    output_folder = os.path.dirname(config_filename)
+    database_file = os.path.join("scratch", "anarayan", "job_" + JOBID, "example.db")
+    output_database_file = os.path.join(output_folder, "example.db")
+    print("Copying database file to ", output_database_file)
+    shutil.copyfile(database_file, output_database_file)
+
+    print("Number of finished trials: ", len(study.trials))
+
+    print("Best trial:")
+    trial = study.best_trial
+
+    print("  Value: ", trial.value)
+
+    print("  Params: ")
+    for key, value in trial.params.items():
+        print("    {}: {}".format(key, value))
+
+    print("  User attrs:")
+    for key, value in trial.user_attrs.items():
+        print("    {}: {}".format(key, value))
