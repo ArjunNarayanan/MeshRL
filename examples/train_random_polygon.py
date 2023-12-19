@@ -63,25 +63,14 @@ if __name__ == "__main__":
     )
 
     ppo_config = config["PPO"]
-    discount = ppo_config["discount"]
-    ent_coef = ppo_config["ent_coef"]
-    vf_coef = ppo_config["vf_coef"]
-    clip_range = ppo_config["clip_range"]
-    learning_rate = ppo_config["learning_rate"]
-    batch_size = ppo_config["batch_size"]
+    ppo_config["policy_kwargs"] = policy_kwargs
+    ppo_config["verbose"] = 1
+    ppo_config["tensorboard_log"] = output_dir
 
     model = PPO(
         CustomActorCriticPolicy,
         env,
-        learning_rate=learning_rate,
-        batch_size=batch_size,
-        gamma=discount,
-        policy_kwargs=policy_kwargs,
-        verbose=1,
-        ent_coef=ent_coef,
-        vf_coef=vf_coef,
-        clip_range=clip_range,
-        tensorboard_log=output_dir
+        **ppo_config,
     )
 
     eval_env = make_vec_env(initialize_environment, 1)

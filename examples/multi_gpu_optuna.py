@@ -5,6 +5,7 @@ from optuna.samplers import TPESampler
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import SubprocVecEnv
 import torch
 import os
 import sys
@@ -30,11 +31,13 @@ def sample_ppo_params(trial: optuna.Trial):
     gamma = 1.0 - trial.suggest_float("gamma", 0.0001, 0.1, log=True)
     gae_lambda = 1.0 - trial.suggest_float("gae_lambda", 0.001, 0.2, log=True)
     ent_coef = trial.suggest_float("ent_coef", 0.00000001, 0.5, log=True)
+    clip_range = trial.suggest_float("clip_range", 0.01, 0.20)
 
     max_grad_norm = trial.suggest_float("max_grad_norm", 0.3, 5.0, log=True)
     learning_rate = trial.suggest_float("lr", 1e-5, 1, log=True)
 
-    n_steps = 2 ** trial.suggest_int("exponent_n_steps", 3, 11)
+    # n_steps = 2 ** trial.suggest_int("exponent_n_steps", 10, 15)
+    n_steps = 256
     batch_size = 2 ** trial.suggest_int("batch_size", 5, 9)
 
     ortho_init = trial.suggest_categorical("ortho_init", [False, True])
@@ -61,6 +64,7 @@ def sample_ppo_params(trial: optuna.Trial):
         "batch_size": batch_size,
         "gamma": gamma,
         "gae_lambda": gae_lambda,
+        "clip_range": clip_range,
         "learning_rate": learning_rate,
         "ent_coef": ent_coef,
         "max_grad_norm": max_grad_norm,
@@ -110,7 +114,12 @@ class Objective:
     def __call__(self, trial):
         gpu_id = self.gpu_queue.get()
 
-        env = make_vec_env(initialize_environment, NUM_ENVS)
+        env = make_vec_env(
+            initialize_environment, 
+            NUM_ENVS,
+            vec_env_cls=SubprocVecEnv
+        )
+
         DEFAULT_HYPERPARAMS = {
             "policy": CustomActorCriticPolicy,
             "env": env,
@@ -180,6 +189,7 @@ if __name__ == "__main__":
     JOBID = os.environ.get("SLURM_JOB_ID")
 
     # Set pytorch num threads to 1 for faster training.
+    # This seems to be slower when we use > 1 GPUs and SubprocVecEnv
     # torch.set_num_threads(1)
 
     sampler = TPESampler(n_startup_trials=N_STARTUP_TRIALS)
