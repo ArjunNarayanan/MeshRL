@@ -12,9 +12,10 @@ import numpy as np
 class RandomPolygonEnv(gym.Env):
     def __init__(
             self,
-            polygon_degree,
+            face_desired_degree,
+            polygon_degree_range,
             template_size,
-            max_steps,
+            max_steps_factor,
             incremental_reward=True,
             logdir=None,
             max_edge_addition_steps=3,
@@ -22,9 +23,12 @@ class RandomPolygonEnv(gym.Env):
             vertex_reward_weight=1
     ):
         super().__init__()
-        self.polygon_degree = polygon_degree
+        self.polygon_degree_range = polygon_degree_range
+        self.polygon_degree = np.random.choice(self.polygon_degree_range)
         self.template_size = template_size
-        self.max_steps = max_steps
+
+        self.max_steps_factor = max_steps_factor
+        self.max_steps = self.max_steps_factor * self.polygon_degree
         self.incremental_reward = incremental_reward
         self.logdir = logdir
 
@@ -33,10 +37,10 @@ class RandomPolygonEnv(gym.Env):
         self.total_num_actions_in_template = self.template_size * self.num_actions_per_halfedge
 
         # Assuming we are working with triangles
-        self.face_desired_degree = 3
-        self.interior_vertex_desired_degree = 6
-        self.boundary_vertex_desired_degree = 4
+        self.face_desired_degree = face_desired_degree
         self.desired_angle = average_face_angle(self.face_desired_degree)
+        self.interior_vertex_desired_degree = rounded_desired_degree(360, self.desired_angle) - 1
+        self.boundary_vertex_desired_degree = rounded_desired_degree(180, self.desired_angle)
 
         graph, desired_degree = initialize_graph_and_desired_degree(
             self.polygon_degree,
@@ -98,9 +102,13 @@ class RandomPolygonEnv(gym.Env):
 
     @classmethod
     def from_config(cls, config):
-        polygon_degree = config["polygon_degree"]
+        face_desired_degree = config["face_desired_degree"]
+        min_polygon_degree = config["min_polygon_degree"]
+        max_polygon_degree = config["max_polygon_degree"]
+        polygon_degree_range = list(range(min_polygon_degree, max_polygon_degree + 1))
+
         template_size = config["template_size"]
-        max_steps = config["max_steps"]
+        max_steps_factor = config["max_steps_factor"]
         incremental_reward = config["incremental_reward"]
         max_edge_addition_steps = config.get("max_edge_addition_steps", 3)
         logdir = config.get("logdir", None)
@@ -108,9 +116,10 @@ class RandomPolygonEnv(gym.Env):
         vertex_reward_weight = config.get("vertex_reward_weight", 1)
 
         return cls(
-            polygon_degree,
+            face_desired_degree,
+            polygon_degree_range,
             template_size,
-            max_steps,
+            max_steps_factor,
             incremental_reward,
             logdir=logdir,
             max_edge_addition_steps=max_edge_addition_steps,
@@ -316,7 +325,8 @@ class RandomPolygonEnv(gym.Env):
                 new_vertex_idx = self.graph.insert_vertex(hidx, tag=False)
                 self.vertex_desired_degree[new_vertex_idx] = self.boundary_vertex_desired_degree
 
-                face_reward = abs(face_degree - self.face_desired_degree) - abs(face_degree + 1 - self.face_desired_degree)
+                face_reward = abs(face_degree - self.face_desired_degree) - abs(
+                    face_degree + 1 - self.face_desired_degree)
                 vertex_reward = 0 - abs(2 - self.boundary_vertex_desired_degree)
             else:
                 face_idx = self.graph.face(hidx)
@@ -483,6 +493,7 @@ class RandomPolygonEnv(gym.Env):
         print("\n\n\tLOGGED EXCEPTED ENV TO : ", exception_filepath, "\n\n\t")
 
     def _hard_reset(self):
+        self.polygon_degree = np.random.choice(self.polygon_degree_range)
         graph, desired_degree = initialize_graph_and_desired_degree(self.polygon_degree, self.desired_angle)
         self.graph = graph
         self.vertex_desired_degree = desired_degree
@@ -494,6 +505,7 @@ class RandomPolygonEnv(gym.Env):
         self.template_center = self._select_halfedge_template_center(self.graph.halfedge_list())
         self._build_template()
 
+        self.max_steps = self.max_steps_factor * self.polygon_degree
         self.num_steps = 0
         self.reward = 0
         self.face_score = self.global_face_score()

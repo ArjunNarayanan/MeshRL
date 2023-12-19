@@ -90,28 +90,30 @@ def reset_if_done(obs, done):
 def plot_env():
     renderer.plot()
     renderer.plot_vertex_scores(env.vertex_desired_degree)
+    renderer.plot_face_scores(env.face_desired_degree)
 
 
-input_folder = "experiments/random-polygon/tri-poly-10"
-fig_output_folder = os.path.join(input_folder, "figures")
-make_output_folder(fig_output_folder)
-
-checkpoint = os.path.join(input_folder, "best_model.zip")
-model = PPO.load(checkpoint)
-
+input_folder = "experiments/random-polygon/tri-10-40"
+# fig_output_folder = os.path.join(input_folder, "figures")
+# make_output_folder(fig_output_folder)
+#
+# checkpoint = os.path.join(input_folder, "best_model.zip")
+# model = PPO.load(checkpoint)
+#
 config_fn = os.path.join(input_folder, "config.yml")
 config = load_yaml_config(config_fn)
 
 env = initialize_environment()
-obs = obs_as_tensor(env._get_obs())
+# obs = obs_as_tensor(env._get_obs())
 renderer = Renderer(env.graph, env.graph.vertex_coordinates)
 plot_env()
+env.reset()
 
-step = 0
-dist = get_action_distribution(obs)
-obs, done = step_environment(dist)
-plot_env()
-obs = reset_if_done(obs, done)
-step += 1
+# step = 0
+# dist = get_action_distribution(obs)
+# obs, done = step_environment(dist)
+# plot_env()
+# obs = reset_if_done(obs, done)
+# step += 1
 
 # save_figure()
