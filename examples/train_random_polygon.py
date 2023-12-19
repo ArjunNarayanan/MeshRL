@@ -51,6 +51,7 @@ if __name__ == "__main__":
     make_output_dir_if_necessary(output_dir)
     print("\n\tUSING OUTPUT DIR: ", output_dir, "\n")
 
+
     feature_extractor_layers = config["feature_extractor"]["number_of_layers"]
     feature_extractor_size = config["feature_extractor"]["output_features"]
     policy_kwargs = dict(
@@ -59,13 +60,14 @@ if __name__ == "__main__":
             input_features=RandomPolygonEnv.get_feature_size(),
             output_features=feature_extractor_size,
             number_of_layers=feature_extractor_layers
-        )
+        ),
+        ortho_init=config["feature_extractor"]["ortho_init"]
     )
 
     ppo_config = config["PPO"]
     ppo_config["policy_kwargs"] = policy_kwargs
     ppo_config["verbose"] = 1
-    ppo_config["tensorboard_log"] = output_dir
+    ppo_config["tensorboard_log"] = output_dir    
 
     model = PPO(
         CustomActorCriticPolicy,

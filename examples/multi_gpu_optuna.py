@@ -196,9 +196,8 @@ if __name__ == "__main__":
     # Do not prune before 1/3 of the max budget is used.
     pruner = MedianPruner(n_startup_trials=N_STARTUP_TRIALS, n_warmup_steps=N_EVALUATIONS // 3)
 
-    # This storage path will be unique
-    storage_path = "sqlite:////scratch/anarayan/job_" + JOBID + "/example.db"
-    # storage_path = "sqlite:///example.db"
+    output_folder = os.path.dirname(config_filename)
+    storage_path = os.path.join("sqlite:///", output_folder, "example.db")
     print("\nUsing storage : ", storage_path)
 
     study = optuna.create_study(
@@ -226,12 +225,6 @@ if __name__ == "__main__":
                 )
             except KeyboardInterrupt:
                 pass
-
-    output_folder = os.path.dirname(config_filename)
-    database_file = os.path.join("scratch", "anarayan", "job_" + JOBID, "example.db")
-    output_database_file = os.path.join(output_folder, "example.db")
-    print("Copying database file to ", output_database_file)
-    shutil.copyfile(database_file, output_database_file)
 
     print("Number of finished trials: ", len(study.trials))
 
