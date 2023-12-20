@@ -2,6 +2,7 @@ import argparse
 import optuna
 from optuna.pruners import MedianPruner
 from optuna.samplers import TPESampler
+from optuna.storages import JournalStorage, JournalFileStorage
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.env_util import make_vec_env
@@ -83,6 +84,7 @@ class TrialEvalCallback(EvalCallback):
             eval_freq: int = 10000,
             deterministic: bool = False,
             verbose: int = 0,
+            best_model_save_path=None,
     ):
         super().__init__(
             eval_env=eval_env,
@@ -90,6 +92,7 @@ class TrialEvalCallback(EvalCallback):
             eval_freq=eval_freq,
             deterministic=deterministic,
             verbose=verbose,
+            best_model_save_path=best_model_save_path
         )
         self.trial = trial
         self.eval_idx = 0
@@ -120,15 +123,17 @@ class Objective:
             vec_env_cls=SubprocVecEnv
         )
 
+        trial_logdir = os.path.join(output_folder, "trial-" + str(trial.number))
         DEFAULT_HYPERPARAMS = {
             "policy": CustomActorCriticPolicy,
             "env": env,
-            "verbose": 1,
+            "verbose": 0,
         }
 
         kwargs = DEFAULT_HYPERPARAMS.copy()
         kwargs.update(sample_ppo_params(trial))
         kwargs["device"] = torch.device("cuda:" + str(gpu_id))
+        kwargs["tensorboard_log"] = trial_logdir
 
         model = PPO(**kwargs)
 
@@ -139,7 +144,8 @@ class Objective:
             n_eval_episodes=N_EVAL_EPISODES,
             eval_freq=EVAL_FREQ,
             deterministic=False,
-            verbose=1
+            verbose=1,
+            best_model_save_path=trial_logdir
         )
 
         nan_encountered = False
@@ -197,14 +203,17 @@ if __name__ == "__main__":
     pruner = MedianPruner(n_startup_trials=N_STARTUP_TRIALS, n_warmup_steps=N_EVALUATIONS // 3)
 
     output_folder = os.path.dirname(config_filename)
-    storage_path = os.path.join("sqlite:///", output_folder, "example.db")
+    storage_path = os.path.join(output_folder, "optuna-journal.log")
+    storage = JournalStorage(JournalFileStorage(storage_path))
     print("\nUsing storage : ", storage_path)
+    study_name = config["study_name"]
 
     study = optuna.create_study(
         sampler=sampler,
         pruner=pruner,
+        study_name=study_name,
         direction="maximize",
-        storage=storage_path
+        storage=storage,
     )
 
     NUM_GPUS = torch.cuda.device_count()

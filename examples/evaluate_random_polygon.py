@@ -91,7 +91,7 @@ def plot_env():
     renderer.coords = env.graph.vertex_coordinates
     renderer.plot()
     renderer.plot_vertex_scores(env.vertex_desired_degree)
-
+    renderer.plot_face_scores(env.face_desired_degree)
 
 input_folder = "experiments/random-polygon/quad-5-20"
 fig_output_folder = os.path.join(input_folder, "figures")
