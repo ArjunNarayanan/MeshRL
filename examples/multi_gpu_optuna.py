@@ -213,7 +213,7 @@ if __name__ == "__main__":
         pruner=pruner,
         study_name=study_name,
         direction="maximize",
-        storage=storage
+        storage=storage,
     )
 
     NUM_GPUS = torch.cuda.device_count()
