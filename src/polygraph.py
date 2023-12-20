@@ -294,6 +294,13 @@ class PolyGraph(nx.DiGraph):
         hidx = self._ensure_tag_form(hidx, self.halfedge_tag)
         return self.has_node(hidx) and self.nodes[hidx].get("type") == "halfedge"
 
+    def _vertex_to_halfedge(self, vidx):
+        vidx = self._ensure_tag_form(vidx, self.vertex_tag)
+        return (hidx for vidx, hidx in self.edges(vidx) if self.is_halfedge(hidx))
+
+    def vertex_on_boundary(self, vidx):
+        return any(self.halfedge_on_boundary(hidx) for hidx in self._vertex_to_halfedge(vidx))
+
     def _node_list_by_type(self, node_type, tag):
         nodes = [node for node, data in self.nodes(data=True) if data.get("type") == node_type]
         if not tag:
@@ -688,3 +695,34 @@ class PolyGraph(nx.DiGraph):
                 append_if_not_seen(twin_edge)
 
         return neighbors
+
+    def _accumulate_neighbor_coordinates(self):
+        accumulated_coords = {k: 2 * [0] for k in self.vertex_coordinates.keys()}
+        for hidx in self.halfedge_list():
+            src_vidx = self.source_vertex(hidx, tag=False)
+            src_coords = self.vertex_coordinates[src_vidx]
+            dst_vidx = self.target_vertex(hidx, tag=False)
+            dst_coords = accumulated_coords[dst_vidx]
+
+            dst_coords[0] += src_coords[0]
+            dst_coords[1] += src_coords[1]
+
+        return accumulated_coords
+
+    def laplace_smooth_vertices(self):
+        accumulated_coords = self._accumulate_neighbor_coordinates()
+
+        # average the coordinates
+        for vidx, coords in accumulated_coords.items():
+            degree = self.vertex_degree(vidx)
+
+            coords[0] /= degree
+            coords[1] /= degree
+
+        # set boundary coordinates to their original values
+        for vidx in accumulated_coords.keys():
+            if self.vertex_on_boundary(vidx):
+                accumulated_coords[vidx] = self.vertex_coordinates[vidx]
+
+        self.vertex_coordinates = accumulated_coords
+        return

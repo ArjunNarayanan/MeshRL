@@ -88,30 +88,34 @@ def reset_if_done(obs, done):
 
 
 def plot_env():
+    renderer.coords = env.graph.vertex_coordinates
     renderer.plot()
     renderer.plot_vertex_scores(env.vertex_desired_degree)
 
 
-input_folder = "experiments/random-polygon/tri-poly-10"
+input_folder = "experiments/random-polygon/quad-5-20"
 fig_output_folder = os.path.join(input_folder, "figures")
 make_output_folder(fig_output_folder)
 
 checkpoint = os.path.join(input_folder, "best_model.zip")
 model = PPO.load(checkpoint)
 
+polygon_degree = 5
 config_fn = os.path.join(input_folder, "config.yml")
 config = load_yaml_config(config_fn)
+config["environment"]["min_polygon_degree"] = polygon_degree
+config["environment"]["max_polygon_degree"] = polygon_degree
 
 env = initialize_environment()
 obs = obs_as_tensor(env._get_obs())
 renderer = Renderer(env.graph, env.graph.vertex_coordinates)
 plot_env()
 
-step = 0
-dist = get_action_distribution(obs)
-obs, done = step_environment(dist)
-plot_env()
-obs = reset_if_done(obs, done)
-step += 1
-
+# step = 0
+# dist = get_action_distribution(obs)
+# obs, done = step_environment(dist)
+# env.graph.laplace_smooth_vertices()
+# plot_env()
+# obs = reset_if_done(obs, done)
+# step += 1
 # save_figure()
