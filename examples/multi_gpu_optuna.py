@@ -32,6 +32,7 @@ def sample_ppo_params(trial: optuna.Trial):
     gamma = 1.0 - trial.suggest_float("gamma", 0.0001, 0.1, log=True)
     gae_lambda = 1.0 - trial.suggest_float("gae_lambda", 0.001, 0.2, log=True)
     ent_coef = trial.suggest_float("ent_coef", 0.00000001, 0.5, log=True)
+    vf_coef = trial.suggest_float("vf_coef", 0.00000001, 0.5, log=True)
     clip_range = trial.suggest_float("clip_range", 0.01, 0.20)
 
     max_grad_norm = trial.suggest_float("max_grad_norm", 0.3, 5.0, log=True)
@@ -68,6 +69,7 @@ def sample_ppo_params(trial: optuna.Trial):
         "clip_range": clip_range,
         "learning_rate": learning_rate,
         "ent_coef": ent_coef,
+        "vf_coef": vf_coef,
         "max_grad_norm": max_grad_norm,
         "policy_kwargs": policy_kwargs,
     }
@@ -145,7 +147,6 @@ class Objective:
             eval_freq=EVAL_FREQ,
             deterministic=False,
             verbose=1,
-            best_model_save_path=trial_logdir
         )
 
         nan_encountered = False
@@ -185,7 +186,7 @@ if __name__ == "__main__":
 
     N_TRIALS = 50
     N_STARTUP_TRIALS = 5
-    N_EVALUATIONS = 50
+    N_EVALUATIONS = 500
     N_EVAL_EPISODES = 100
     N_TIMESTEPS = int(config["total_timesteps"])
 

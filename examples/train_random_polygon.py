@@ -2,6 +2,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import EvalCallback
 import argparse
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import SubprocVecEnv
 import sys
 import os
 
@@ -39,7 +40,11 @@ if __name__ == "__main__":
 
     num_envs = args.num_envs
     if num_envs > 1:
-        env = make_vec_env(initialize_environment, num_envs)
+        env = make_vec_env(
+            initialize_environment, 
+            num_envs,
+            vec_env_cls=SubprocVecEnv,
+        )
     else:
         env = initialize_environment()
 

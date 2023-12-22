@@ -28,7 +28,7 @@ class RandomPolygonEnv(gym.Env):
         self.template_size = template_size
 
         self.max_steps_factor = max_steps_factor
-        self.max_steps = self.max_steps_factor * self.polygon_degree
+        self.max_steps = int(self.max_steps_factor * self.polygon_degree)
         self.incremental_reward = incremental_reward
         self.logdir = logdir
 
@@ -505,7 +505,7 @@ class RandomPolygonEnv(gym.Env):
         self.template_center = self._select_halfedge_template_center(self.graph.halfedge_list())
         self._build_template()
 
-        self.max_steps = self.max_steps_factor * self.polygon_degree
+        self.max_steps = int(self.max_steps_factor * self.polygon_degree)
         self.num_steps = 0
         self.reward = 0
         self.face_score = self.global_face_score()
