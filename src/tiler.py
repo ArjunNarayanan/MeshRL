@@ -287,3 +287,48 @@ class Tiler(nx.Graph):
             next_halfedge = self.next_half_edge(next_halfedge)
 
         return loop
+
+    def is_half_edge(self, hidx):
+        if hidx is None:
+            return False
+
+        hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
+        return self.has_node(hidx) and self.nodes[hidx].get("type") == "halfedge"
+
+    def create_face(self):
+        new_face_idx = (self.next_face_index, self.face_tag)
+        self.add_node(new_face_idx, type="face")
+        self.next_face_index += 1
+        return new_face_idx
+
+    def is_valid_edge_insert(self, hidx, k):
+        if not self.is_half_edge(hidx):
+            return False
+
+        face_idx = self.face(hidx)
+        if not (1 <= k <= self.face_degree(face_idx)):
+            return False
+
+        return True
+
+    def insert_half_edge(self, hidx, k):
+        """
+        Insert edge from source of hidx to source of half edge that is
+        k next steps ahead.
+        """
+        raise NotImplementedError
+        assert self.is_valid_edge_insert(hidx, k), "Invalid edge insert encountered"
+
+        hidx = self._ensure_tag_form(hidx, self.halfedge_tag)
+        face_idx = self.face(hidx)
+
+        new_face_idx = self.create_face()
+        # remove edges to current face and add edge to new face
+        current_half_edge = hidx
+        for count in range(k):
+            self.remove_edge(current_half_edge, face_idx)
+            self.add_edge(current_half_edge, new_face_idx, type="face")
+            current_half_edge = self.next_half_edge(current_half_edge)
+
+        new_face_next_halfedge = hidx
+        new_face_prev_halfedge = current_half_edge
