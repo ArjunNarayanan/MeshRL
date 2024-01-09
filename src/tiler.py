@@ -4,17 +4,26 @@ from collections import deque
 
 
 class HalfEdge:
-    def __init__(self, id, face=None):
+    def __init__(
+            self,
+            id,
+            face=None,
+            next=None,
+            previous=None,
+            twin=None,
+            source=None,
+            target=None
+    ):
         self.id = id
         self.face = face
-        self.next = None
-        self.previous = None
-        self.twin = None
-        self.source = None
-        self.target = None
+        self.next = next
+        self.previous = previous
+        self.twin = twin
+        self.source = source
+        self.target = target
 
 
-class Tiler(nx.Graph):
+class Tiler(nx.MultiGraph):
     def __init__(self):
         super().__init__()
         self.next_half_edge_index = 0
@@ -53,7 +62,7 @@ class Tiler(nx.Graph):
         graph.next_boundary_index = 0
 
         half_edge_ids = [(idx, graph.half_edge_tag) for idx in range(graph.next_half_edge_index)]
-        graph.add_nodes_from(half_edge_ids, type="halfedge")
+        graph.add_nodes_from(half_edge_ids, type="half_edge")
         half_edges = [HalfEdge(hidx) for hidx in half_edge_ids]
         graph.half_edges = dict(zip(half_edge_ids, half_edges))
 
@@ -72,6 +81,10 @@ class Tiler(nx.Graph):
 
         return graph
 
+    def is_user_defined_vertex(self, vidx):
+        vidx = self._ensure_untagged_form(vidx)
+        return vidx in self.user_defined_vertices
+
     def associate_previous_next_half_edge(self, previous_hidx, next_hidx):
         previous_hidx = self._ensure_tag_form(previous_hidx, self.half_edge_tag)
         next_hidx = self._ensure_tag_form(next_hidx, self.half_edge_tag)
@@ -84,21 +97,21 @@ class Tiler(nx.Graph):
         vidx = self._ensure_tag_form(vidx, self.vertex_tag)
 
         self.half_edges[hidx].source = vidx
-        self.add_edge(hidx, vidx, type="source")
+        self.add_edge(hidx, vidx, key="source")
 
     def associate_half_edge_target_vertex(self, hidx, vidx):
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
         vidx = self._ensure_tag_form(vidx, self.vertex_tag)
 
         self.half_edges[hidx].target = vidx
-        self.add_edge(hidx, vidx, type="target")
+        self.add_edge(hidx, vidx, key="target")
 
     def associate_half_edge_face(self, hidx, fidx):
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
         fidx = self._ensure_tag_form(fidx, self.face_tag)
 
         self.half_edges[hidx].face = fidx
-        self.add_edge(hidx, fidx, type="face")
+        self.add_edge(hidx, fidx, key="face")
 
     def associate_half_edge_twin(self, hidx, twin_hidx):
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
@@ -219,7 +232,7 @@ class Tiler(nx.Graph):
         return sum(1 for vert, data in self.nodes(data=True) if data.get("type") == type)
 
     def number_of_half_edges(self):
-        return self._number_of_nodes("halfedge")
+        return self._number_of_nodes("half_edge")
 
     def number_of_vertices(self):
         return self._number_of_nodes("vertex")
@@ -228,31 +241,64 @@ class Tiler(nx.Graph):
         return self._number_of_nodes("face")
 
     def number_of_edges_of_type(self, type=None):
-        return sum(1 for src, dst, data in self.edges(data=True) if data.get("type") == type)
+        return sum(1 for src, dst, key in self.edges(keys=True) if key == type)
 
-    def source_vertex(self, hidx):
-        hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
-        return self.half_edges[hidx].source
+    def _node_list_by_type(self, node_type, tag):
+        nodes = [node for node, data in self.nodes(data=True) if data.get("type") == node_type]
+        if not tag:
+            nodes = [self._ensure_untagged_form(idx) for idx in nodes]
+        return nodes
 
-    def target_vertex(self, hidx):
-        hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
-        return self.half_edges[hidx].target
+    def half_edge_list(self, tag=True):
+        return self._node_list_by_type("half_edge", tag)
 
-    def twin_half_edge(self, hidx):
+    def source_vertex(self, hidx, tag=True):
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
-        return self.half_edges[hidx].twin
+        vidx = self.half_edges[hidx].source
+        if tag:
+            return vidx
+        else:
+            return self._ensure_untagged_form(vidx)
 
-    def next_half_edge(self, hidx):
+    def target_vertex(self, hidx, tag=True):
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
-        return self.half_edges[hidx].next
+        vidx = self.half_edges[hidx].target
+        if tag:
+            return vidx
+        else:
+            return self._ensure_untagged_form(vidx)
 
-    def previous_half_edge(self, hidx):
+    def twin_half_edge(self, hidx, tag=True):
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
-        return self.half_edges[hidx].previous
+        twin_idx = self.half_edges[hidx].twin
+        if tag:
+            return twin_idx
+        else:
+            return self._ensure_untagged_form(twin_idx)
 
-    def face(self, hidx):
+    def next_half_edge(self, hidx, tag=True):
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
-        return self.half_edges[hidx].face
+        next_idx = self.half_edges[hidx].next
+        if tag:
+            return next_idx
+        else:
+            return self._ensure_untagged_form(next_idx)
+
+    def previous_half_edge(self, hidx, tag=True):
+        hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
+        prev_idx = self.half_edges[hidx].previous
+        if tag:
+            return prev_idx
+        else:
+            return self._ensure_untagged_form(prev_idx)
+
+    def face(self, hidx, tag=True):
+        hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
+        fidx = self.half_edges[hidx].face
+        if tag:
+            return fidx
+        else:
+            return self._ensure_untagged_form(fidx)
 
     def vertex_degree(self, vidx):
         vidx = self._ensure_tag_form(vidx, self.vertex_tag)
@@ -270,21 +316,21 @@ class Tiler(nx.Graph):
     def face_half_edges(self, face_idx, tag=True):
         """return all half_edges connected to a face"""
         face_idx = self._ensure_tag_form(face_idx, self.face_tag)
-        halfedges = [h for f, h in self.edges(face_idx)]
+        half_edges = [h for f, h in self.edges(face_idx)]
         if tag:
-            return halfedges
+            return half_edges
         else:
-            halfedges = [h[0] for h in halfedges]
-            return halfedges
+            half_edges = [self._ensure_untagged_form(h) for h in half_edges]
+            return half_edges
 
-    def generate_half_edge_face_loop(self, halfedge_idx):
-        """generate list of halfedges in a face loop"""
-        halfedge_idx = self._ensure_tag_form(halfedge_idx, self.half_edge_tag)
-        loop = [halfedge_idx]
-        next_halfedge = self.next_half_edge(halfedge_idx)
-        while next_halfedge != halfedge_idx:
-            loop.append(next_halfedge)
-            next_halfedge = self.next_half_edge(next_halfedge)
+    def generate_half_edge_face_loop(self, half_edge_idx):
+        """generate list of half_edges in a face loop"""
+        half_edge_idx = self._ensure_tag_form(half_edge_idx, self.half_edge_tag)
+        loop = [half_edge_idx]
+        next_half_edge = self.next_half_edge(half_edge_idx)
+        while next_half_edge != half_edge_idx:
+            loop.append(next_half_edge)
+            next_half_edge = self.next_half_edge(next_half_edge)
 
         return loop
 
@@ -293,7 +339,7 @@ class Tiler(nx.Graph):
             return False
 
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
-        return self.has_node(hidx) and self.nodes[hidx].get("type") == "halfedge"
+        return self.has_node(hidx) and self.nodes[hidx].get("type") == "half_edge"
 
     def create_face(self):
         new_face_idx = (self.next_face_index, self.face_tag)
@@ -301,34 +347,321 @@ class Tiler(nx.Graph):
         self.next_face_index += 1
         return new_face_idx
 
+    def create_half_edge(self, next_half_edge_idx, prev_half_edge_idx):
+        next_half_edge_idx = self._ensure_tag_form(next_half_edge_idx, self.half_edge_tag)
+        prev_half_edge_idx = self._ensure_tag_form(prev_half_edge_idx, self.half_edge_tag)
+
+        next_half_edge = self.half_edges[next_half_edge_idx]
+        prev_half_edge = self.half_edges[prev_half_edge_idx]
+        assert next_half_edge.face == prev_half_edge.face, "next/previous edges must share face"
+
+        source_vertex = prev_half_edge.target
+        target_vertex = next_half_edge.source
+        face_idx = next_half_edge.face
+
+        new_half_edge_idx = (self.next_half_edge_index, self.half_edge_tag)
+        self.next_half_edge_index += 1
+
+        new_half_edge = HalfEdge(
+            new_half_edge_idx,
+            face=face_idx,
+            next=next_half_edge_idx,
+            previous=prev_half_edge_idx,
+            source=source_vertex,
+            target=target_vertex
+        )
+        self.half_edges[new_half_edge_idx] = new_half_edge
+        self.add_node(new_half_edge_idx, type="half_edge")
+
+        next_half_edge.previous = new_half_edge_idx
+        prev_half_edge.next = new_half_edge_idx
+
+        self.add_edge(new_half_edge_idx, source_vertex, key="source")
+        self.add_edge(new_half_edge_idx, target_vertex, key="target")
+        self.add_edge(new_half_edge_idx, face_idx, key="face")
+
+        return new_half_edge_idx
+
+    def create_boundary_half_edge(self, target_vertex, source_vertex):
+        target_vertex = self._ensure_tag_form(target_vertex, self.vertex_tag)
+        source_vertex = self._ensure_tag_form(source_vertex, self.vertex_tag)
+
+        boundary_edge_idx = (self.next_boundary_index, self.boundary_tag)
+        self.next_boundary_index += 1
+
+        self.add_node(boundary_edge_idx, type="boundary")
+        boundary_edge = HalfEdge(
+            boundary_edge_idx,
+            source=source_vertex,
+            target=target_vertex
+        )
+        self.half_edges[boundary_edge_idx] = boundary_edge
+
+        self.add_edge(boundary_edge_idx, source_vertex, key="source")
+        self.add_edge(boundary_edge_idx, target_vertex, key="target")
+
+        return boundary_edge_idx
+
     def is_valid_edge_insert(self, hidx, k):
         if not self.is_half_edge(hidx):
             return False
 
         face_idx = self.face(hidx)
-        if not (1 <= k <= self.face_degree(face_idx)):
+        if not (0 <= k < self.face_degree(face_idx) - 1):
             return False
 
         return True
 
     def insert_half_edge(self, hidx, k):
         """
-        Insert edge from source of hidx to source of half edge that is
+        Insert edge from source of hidx to target of half edge that is
         k next steps ahead.
         """
-        raise NotImplementedError
         assert self.is_valid_edge_insert(hidx, k), "Invalid edge insert encountered"
 
-        hidx = self._ensure_tag_form(hidx, self.halfedge_tag)
+        hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
         face_idx = self.face(hidx)
 
         new_face_idx = self.create_face()
         # remove edges to current face and add edge to new face
         current_half_edge = hidx
-        for count in range(k):
-            self.remove_edge(current_half_edge, face_idx)
-            self.add_edge(current_half_edge, new_face_idx, type="face")
+        for count in range(k + 1):
+            self.remove_edge(current_half_edge, face_idx, key="face")
+            self.associate_half_edge_face(current_half_edge, new_face_idx)
             current_half_edge = self.next_half_edge(current_half_edge)
 
-        new_face_next_halfedge = hidx
-        new_face_prev_halfedge = current_half_edge
+        new_face_next_idx = hidx
+        new_face_prev_idx = self.previous_half_edge(current_half_edge)
+        old_face_next_idx = current_half_edge
+        old_face_prev_idx = self.previous_half_edge(hidx)
+
+        new_face_new_idx = self.create_half_edge(new_face_next_idx, new_face_prev_idx)
+        old_face_new_idx = self.create_half_edge(old_face_next_idx, old_face_prev_idx)
+
+        self.associate_half_edge_twin(new_face_new_idx, old_face_new_idx)
+
+    def vertex_coordinate(self, vertex_idx):
+        vertex_idx = self._ensure_untagged_form(vertex_idx)
+        return self.vertex_coordinates[vertex_idx]
+
+    def get_new_vertex_coordinate(self, next_vertex, previous_vertex):
+        if self.vertex_coordinates is not None:
+            coord1 = self.vertex_coordinate(next_vertex)
+            coord2 = self.vertex_coordinate(previous_vertex)
+            new_coord = [(c1 + c2) / 2 for c1, c2 in zip(coord1, coord2)]
+            return new_coord
+        else:
+            return None
+
+    def create_vertex(self, coord=None):
+        new_vertex_idx = (self.next_vertex_index, self.vertex_tag)
+        self.add_node(new_vertex_idx, type="vertex")
+        if coord is not None and self.vertex_coordinates is not None:
+            # assert len(coord) == 2
+            self.vertex_coordinates[self.next_vertex_index] = coord
+        self.next_vertex_index += 1
+        return new_vertex_idx
+
+    def set_target_vertex(self, hidx, vidx):
+        hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
+        vidx = self._ensure_tag_form(vidx, self.vertex_tag)
+
+        current_target = self.target_vertex(hidx)
+        twin_edge = self.twin_half_edge(hidx)
+        self.remove_edge(hidx, current_target, key="target")
+        self.remove_edge(twin_edge, current_target, key="source")
+
+        self.half_edges[hidx].target = vidx
+        self.half_edges[twin_edge].source = vidx
+        self.add_edge(hidx, vidx, key="target")
+        self.add_edge(twin_edge, vidx, key="source")
+
+    def _insert_boundary_vertex(self, hidx):
+        hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
+        assert self.is_half_edge(hidx)
+        assert self.half_edge_on_boundary(hidx)
+
+        current_target_vertex = self.target_vertex(hidx)
+        current_source_vertex = self.source_vertex(hidx)
+
+        new_vertex_coord = self.get_new_vertex_coordinate(current_target_vertex, current_source_vertex)
+        new_vertex_idx = self.create_vertex(new_vertex_coord)
+
+        next_half_edge = self.next_half_edge(hidx)
+        self.set_target_vertex(hidx, new_vertex_idx)
+
+        new_half_edge = self.create_half_edge(next_half_edge, hidx)
+        new_boundary_edge = self.create_boundary_half_edge(new_vertex_idx, current_target_vertex)
+        self.associate_half_edge_twin(new_half_edge, new_boundary_edge)
+
+        return new_vertex_idx
+
+    def _insert_interior_vertex(self, hidx):
+        hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
+        assert self.is_half_edge(hidx)
+        assert not self.half_edge_on_boundary(hidx)
+
+        next_hidx = self.next_half_edge(hidx)
+        twin_hidx = self.twin_half_edge(hidx)
+        twin_prev_hidx = self.previous_half_edge(twin_hidx)
+
+        current_target_vertex = self.target_vertex(hidx)
+        current_source_vertex = self.source_vertex(hidx)
+        new_vertex_coord = self.get_new_vertex_coordinate(current_target_vertex, current_source_vertex)
+        new_vertex_idx = self.create_vertex(new_vertex_coord)
+
+        self.set_target_vertex(hidx, new_vertex_idx)
+
+        new_next_hidx = self.create_half_edge(next_hidx, hidx)
+        new_twin_prev_hidx = self.create_half_edge(twin_hidx, twin_prev_hidx)
+        self.associate_half_edge_twin(new_next_hidx, new_twin_prev_hidx)
+
+        return new_vertex_idx
+
+    def insert_vertex(self, hidx, tag=True):
+        hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
+        assert self.is_half_edge(hidx)
+        if self.half_edge_on_boundary(hidx):
+            new_vertex = self._insert_boundary_vertex(hidx)
+        else:
+            new_vertex = self._insert_interior_vertex(hidx)
+
+        if tag:
+            return new_vertex
+        else:
+            return self._ensure_untagged_form(new_vertex)
+
+    def _delete_vertex_coordinates(self, vidx):
+        vidx = self._ensure_untagged_form(vidx)
+        if self.vertex_coordinates is not None:
+            coords = self.vertex_coordinates.pop(vidx, None)
+            if coords is None:
+                print("Warning: deleted vertex not found in vertex coordinates")
+
+    def _delete_half_edge(self, hidx):
+        hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
+        twin = self.twin_half_edge(hidx)
+        self.remove_node(hidx)
+        self.remove_node(twin)
+        self.half_edges.pop(hidx)
+        self.half_edges.pop(twin)
+
+    def _delete_vertex(self, vidx):
+        vidx = self._ensure_tag_form(vidx, self.vertex_tag)
+        self.remove_node(vidx)
+        self._delete_vertex_coordinates(vidx)
+
+    def _delete_boundary_vertex(self, hidx):
+        """deletes vertex at source of hidx"""
+        hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
+        assert self.half_edge_on_boundary(hidx)
+        source_vertex = self.source_vertex(hidx)
+        assert self.vertex_degree(source_vertex) == 2
+        assert not self.is_user_defined_vertex(source_vertex)
+
+        next_half_edge = self.next_half_edge(hidx)
+        prev_half_edge = self.previous_half_edge(hidx)
+
+        target_vertex = self.target_vertex(hidx)
+        self.set_target_vertex(prev_half_edge, target_vertex)
+        self.associate_previous_next_half_edge(prev_half_edge, next_half_edge)
+
+        self._delete_half_edge(hidx)
+        self._delete_vertex(source_vertex)
+
+    def _delete_interior_vertex(self, hidx):
+        """deletes vertex at source of hidx"""
+        hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
+        assert not self.half_edge_on_boundary(hidx)
+        source_vertex = self.source_vertex(hidx)
+        # assert self.vertex_degree(source_vertex) == 2
+
+        next_half_edge = self.next_half_edge(hidx)
+        prev_half_edge = self.previous_half_edge(hidx)
+        twin_half_edge = self.twin_half_edge(hidx)
+
+        next_twin_half_edge = self.next_half_edge(twin_half_edge)
+        prev_twin_half_edge = self.previous_half_edge(twin_half_edge)
+
+        target_vertex = self.target_vertex(hidx)
+        self.set_target_vertex(prev_half_edge, target_vertex)
+        self.associate_previous_next_half_edge(prev_half_edge, next_half_edge)
+        self.associate_previous_next_half_edge(prev_twin_half_edge, next_twin_half_edge)
+
+        self._delete_half_edge(hidx)
+        self._delete_vertex(source_vertex)
+
+    def is_valid_delete_source_vertex(self, hidx):
+        """Check if vertex at source of hidx can be deleted"""
+        if not self.is_half_edge(hidx):
+            return False
+
+        vidx = self.source_vertex(hidx)
+        if self.is_user_defined_vertex(vidx):
+            return False
+
+        if self.vertex_degree(vidx) != 2:
+            return False
+
+        fidx = self.face(hidx)
+        if self.face_degree(fidx) < 3:
+            return False
+
+        if not self.half_edge_on_boundary(hidx):
+            twin_edge = self.twin_half_edge(hidx)
+            twin_face = self.face(twin_edge)
+            if self.face_degree(twin_face) < 3:
+                return False
+
+        return True
+
+    def delete_source_vertex(self, hidx):
+        assert self.is_valid_delete_source_vertex(hidx), "cannot delete vertex at source of : " + str(hidx)
+        if self.half_edge_on_boundary(hidx):
+            self._delete_boundary_vertex(hidx)
+        else:
+            self._delete_interior_vertex(hidx)
+
+    def is_valid_delete_half_edge(self, hidx):
+        if not self.is_half_edge(hidx):
+            return False
+
+        if self.half_edge_on_boundary(hidx):
+            return False
+
+        # Deleting a half-edge results in merging of faces on either side.
+        # If these faces are already the same, this is an invalid delete
+        twin_edge = self.twin_half_edge(hidx)
+        current_face = self.face(hidx)
+        twin_face = self.face(twin_edge)
+        if current_face == twin_face:
+            return False
+
+        return True
+
+    def _half_edges_of_face(self, fidx):
+        fidx = self._ensure_tag_form(fidx, self.face_tag)
+        edges = (target for src, target, key in self.edges(fidx, keys=True) if key == "face")
+        return edges
+
+    def delete_half_edge(self, hidx):
+        assert self.is_valid_delete_half_edge(hidx)
+
+        next_edge = self.next_half_edge(hidx)
+        prev_edge = self.previous_half_edge(hidx)
+        twin_edge = self.twin_half_edge(hidx)
+        prev_twin = self.previous_half_edge(twin_edge)
+        next_twin = self.next_half_edge(twin_edge)
+
+        current_face = self.face(hidx)
+        twin_face = self.face(twin_edge)
+
+        # Associate all edges from neighboring face with current face and delete neighboring face
+        twin_face_edges = self._half_edges_of_face(twin_face)
+        for half_edge in twin_face_edges:
+            self.associate_half_edge_face(half_edge, current_face)
+        self.remove_node(twin_face)
+
+        self.associate_previous_next_half_edge(prev_edge, next_twin)
+        self.associate_previous_next_half_edge(prev_twin, next_edge)
+        self._delete_half_edge(hidx)

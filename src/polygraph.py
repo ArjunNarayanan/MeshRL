@@ -624,6 +624,8 @@ class PolyGraph(nx.DiGraph):
         if self.vertex_degree(source_vertex) <= 2 or self.vertex_degree(target_vertex) <= 2:
             return False
 
+        # Deleting a half-edge results in merging of faces on either side.
+        # If these faces are already the same, this is an invalid delete
         twin_edge = self.twin_halfedge(hidx)
         current_face = self.face(hidx)
         twin_face = self.face(twin_edge)
