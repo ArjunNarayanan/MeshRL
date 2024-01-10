@@ -2,7 +2,6 @@ import os
 from src.polygraph import PolyGraph
 import gymnasium as gym
 from gymnasium.spaces import Discrete, Box, Dict
-import numpy as np
 from copy import deepcopy
 import pickle
 import uuid
@@ -36,7 +35,6 @@ class RandomPolygonEnv(gym.Env):
         self.num_actions_per_halfedge = self.get_num_actions_per_halfedge(max_edge_addition_steps)
         self.total_num_actions_in_template = self.template_size * self.num_actions_per_halfedge
 
-        # Assuming we are working with triangles
         self.face_desired_degree = face_desired_degree
         self.desired_angle = average_face_angle(self.face_desired_degree)
         self.interior_vertex_desired_degree = rounded_desired_degree(360, self.desired_angle) - 1
