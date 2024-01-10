@@ -80,9 +80,10 @@ class RandomPolygonEnv(gym.Env):
         self.num_features = self.get_feature_size()
 
         self.action_space = Discrete(self.num_actions_per_half_edge)
+        self.clamp_features_max = 10
         self.observation_space = Dict(
             {
-                "features": Box(low=0, high=10, shape=(self.template_size, self.num_features)),
+                "features": Box(low=0, high=self.clamp_features_max, shape=(self.template_size, self.num_features)),
                 "next": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
                 "previous": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
                 "twin": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
@@ -177,9 +178,9 @@ class RandomPolygonEnv(gym.Env):
             face_degree = self.graph.face_degree(fidx)
 
             matrix[order, :] = [
-                vertex_degree / vertex_desired_degree,
+                min(vertex_degree / vertex_desired_degree, self.clamp_features_max),
                 vertex_desired_degree,
-                face_degree / self.face_desired_degree,
+                min(face_degree / self.face_desired_degree, self.clamp_features_max),
                 self.face_desired_degree,
                 is_user_defined_vertex
             ]
