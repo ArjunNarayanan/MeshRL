@@ -252,6 +252,9 @@ class Tiler(nx.MultiGraph):
     def half_edge_list(self, tag=True):
         return self._node_list_by_type("half_edge", tag)
 
+    def halfedge_list(self, tag=True):
+        return self.half_edge_list(tag)
+
     def face_list(self, tag=True):
         return self._node_list_by_type("face", tag)
 
@@ -329,6 +332,14 @@ class Tiler(nx.MultiGraph):
             half_edges = [self._ensure_untagged_form(h) for h in half_edges]
             return half_edges
 
+    def first_face_halfedge(self, face_idx, tag=True):
+        face_idx = self._ensure_tag_form(face_idx, self.face_tag)
+        halfedge = next(h for f, h, key in self.edges(face_idx, keys=True) if key == "face")
+        if tag:
+            return halfedge
+        else:
+            return halfedge[0]
+
     def generate_half_edge_face_loop(self, half_edge_idx):
         """generate list of half_edges in a face loop"""
         half_edge_idx = self._ensure_tag_form(half_edge_idx, self.half_edge_tag)
@@ -339,6 +350,9 @@ class Tiler(nx.MultiGraph):
             next_half_edge = self.next_half_edge(next_half_edge)
 
         return loop
+
+    def generate_halfedge_face_loop(self, halfedge_idx):
+        return self.generate_half_edge_face_loop(halfedge_idx)
 
     def is_half_edge(self, hidx):
         if hidx is None:
@@ -532,10 +546,10 @@ class Tiler(nx.MultiGraph):
         else:
             new_vertex = self._insert_interior_vertex(hidx)
 
-        if tag:
-            return new_vertex
-        else:
-            return self._ensure_untagged_form(new_vertex)
+        # if tag:
+        #     return new_vertex
+        # else:
+        #     return self._ensure_untagged_form(new_vertex)
 
     def _delete_vertex_coordinates(self, vidx):
         vidx = self._ensure_untagged_form(vidx)
@@ -633,6 +647,11 @@ class Tiler(nx.MultiGraph):
             return False
 
         if self.half_edge_on_boundary(hidx):
+            return False
+
+        source_vertex = self.source_vertex(hidx)
+        target_vertex = self.target_vertex(hidx)
+        if self.vertex_degree(source_vertex) <= 2 or self.vertex_degree(target_vertex) <= 2:
             return False
 
         # Deleting a half-edge results in merging of faces on either side.

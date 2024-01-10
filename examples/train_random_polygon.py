@@ -7,7 +7,7 @@ import sys
 import os
 
 sys.path.append(os.getcwd())
-from envs.random_polygon_env import RandomPolygonEnv
+from envs.random_polygon_tiler_env import RandomPolygonEnv
 from src.feature_extractor import FeatureExtractor
 from src.policy import CustomActorCriticPolicy
 from src.utils import load_yaml_config

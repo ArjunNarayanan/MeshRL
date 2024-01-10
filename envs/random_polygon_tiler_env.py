@@ -57,11 +57,13 @@ class RandomPolygonEnv(gym.Env):
         self.initial_face_score = self.face_score
         self.initial_vertex_score = self.vertex_score
 
+        self.exception_occurred = False
+        self.terminated = self.is_terminated()
+
         self.no_action_reward = -4
 
         # Attributes for excpetion handling
         self.initial_graph = deepcopy(self.graph)
-        self.exception_occurred = False
         self.exception_count = 0
         self.action_sequence = []
         if logdir is None:
@@ -286,7 +288,7 @@ class RandomPolygonEnv(gym.Env):
             original_face_idx = self.graph.face(hidx)
             original_face_degree = self.graph.face_degree(original_face_idx)
 
-            self.graph.insert_halfedge(hidx, num_steps)
+            self.graph.insert_half_edge(hidx, num_steps)
             new_face_idx = self.graph.face(hidx)
 
             original_face_new_degree = self.graph.face_degree(original_face_idx)
@@ -310,6 +312,226 @@ class RandomPolygonEnv(gym.Env):
                              abs(prev_source_vertex_degree - prev_source_vertex_desired_degree))
 
             self._update_scores(face_reward, vertex_reward)
+
+        return
+
+    def _step_insert_vertex(self, hidx):
+        if self.graph.is_half_edge(hidx):
+            if self.graph.half_edge_on_boundary(hidx):
+                face_idx = self.graph.face(hidx)
+                face_degree = self.graph.face_degree(face_idx)
+                self.graph.insert_vertex(hidx)
+
+                new_vertex_idx = self.graph.target_vertex(hidx, tag=False)
+                self.vertex_desired_degree[new_vertex_idx] = self.boundary_vertex_desired_degree
+
+                face_reward = abs(face_degree - self.face_desired_degree) - abs(
+                    face_degree + 1 - self.face_desired_degree)
+                vertex_reward = 0 - abs(2 - self.boundary_vertex_desired_degree)
+            else:
+                face_idx = self.graph.face(hidx)
+                face_degree = self.graph.face_degree(face_idx)
+
+                twin_hidx = self.graph.twin_half_edge(hidx)
+                twin_face = self.graph.face(twin_hidx)
+                twin_face_degree = self.graph.face_degree(twin_face)
+
+                self.graph.insert_vertex(hidx)
+
+                new_vertex_idx = self.graph.target_vertex(hidx, tag=False)
+                self.vertex_desired_degree[new_vertex_idx] = self.interior_vertex_desired_degree
+
+                face_reward = (abs(face_degree - self.face_desired_degree) +
+                               abs(twin_face_degree - self.face_desired_degree)) - \
+                              (abs(face_degree + 1 - self.face_desired_degree) +
+                               abs(twin_face_degree + 1 - self.face_desired_degree))
+                vertex_reward = 0 - abs(2 - self.interior_vertex_desired_degree)
+
+            self._update_scores(face_reward, vertex_reward)
+
+        return
+
+    def _step_delete_edge(self, hidx):
+        if self.graph.is_valid_delete_half_edge(hidx):
+            face = self.graph.face(hidx)
+            twin_hidx = self.graph.twin_half_edge(hidx)
+            twin_face = self.graph.face(twin_hidx)
+
+            source_vertex = self.graph.source_vertex(hidx, tag=False)
+            target_vertex = self.graph.target_vertex(hidx, tag=False)
+
+            current_face_degree = self.graph.face_degree(face)
+            twin_face_degree = self.graph.face_degree(twin_face)
+
+            source_vertex_degree = self.graph.vertex_degree(source_vertex)
+            target_vertex_degree = self.graph.vertex_degree(target_vertex)
+
+            source_desired_degree = self.vertex_desired_degree[source_vertex]
+            target_desired_degree = self.vertex_desired_degree[target_vertex]
+
+            self.graph.delete_half_edge(hidx)
+
+            face_reward = (abs(current_face_degree - self.face_desired_degree) +
+                           abs(twin_face_degree - self.face_desired_degree)) - \
+                          (abs(current_face_degree + twin_face_degree - 2 - self.face_desired_degree))
+
+            vertex_reward = (abs(source_vertex_degree - source_desired_degree) +
+                             abs(target_vertex_degree - target_desired_degree)) - \
+                            (abs(source_vertex_degree - 1 - source_desired_degree) +
+                             abs(target_vertex_degree - 1 - target_desired_degree))
+            self._update_scores(face_reward, vertex_reward)
+
+        return
+
+    def _step_delete_source_vertex(self, hidx):
+        if self.graph.is_valid_delete_source_vertex(hidx):
+            if self.graph.half_edge_on_boundary(hidx):
+                face_idx = self.graph.face(hidx)
+                source_vertex = self.graph.source_vertex(hidx, tag=False)
+
+                face_degree = self.graph.face_degree(face_idx)
+                source_vertex_degree = self.graph.vertex_degree(source_vertex)
+                source_vertex_desired_degree = self.vertex_desired_degree[source_vertex]
+
+                self.graph.delete_source_vertex(hidx)
+
+                face_reward = abs(face_degree - self.face_desired_degree) - (
+                    abs(face_degree - 1 - self.face_desired_degree))
+                vertex_reward = abs(source_vertex_degree - source_vertex_desired_degree)
+
+            else:
+                face_idx = self.graph.face(hidx)
+                twin_half_edge = self.graph.twin_half_edge(hidx)
+                source_vertex = self.graph.source_vertex(hidx, tag=False)
+                twin_face = self.graph.face(twin_half_edge)
+
+                face_degree = self.graph.face_degree(face_idx)
+                twin_face_degree = self.graph.face_degree(twin_face)
+                source_vertex_degree = self.graph.vertex_degree(source_vertex)
+                source_vertex_desired_degree = self.vertex_desired_degree[source_vertex]
+
+                self.graph.delete_source_vertex(hidx)
+
+                face_reward = (abs(face_degree - self.face_desired_degree) +
+                               abs(twin_face_degree - self.face_desired_degree)) - \
+                              (abs(face_degree - 1 - self.face_desired_degree) +
+                               abs(twin_face_degree - 1 - self.face_desired_degree))
+                vertex_reward = abs(source_vertex_degree - source_vertex_desired_degree)
+
+            self._update_scores(face_reward, vertex_reward)
+            self.vertex_desired_degree.pop(source_vertex)
+
+    def _update_scores_on_reset(self):
+        self.face_score = self.global_face_score()
+        self.vertex_score = self.global_vertex_score()
+        self.score = self.face_score + self.vertex_score
+        self.initial_score = self.score
+        self.initial_face_score = self.face_score
+        self.initial_vertex_score = self.vertex_score
+
+    def _step_half_edge_action(self, half_edge, action):
+        assert 0 <= action < self.num_actions_per_half_edge
+
+        if action < self.max_edge_addition_steps:
+            self._step_insert_edge(half_edge, action)
+        elif action == self.max_edge_addition_steps:
+            self._step_delete_edge(half_edge)
+        elif action == self.max_edge_addition_steps + 1:
+            self._step_insert_vertex(half_edge)
+        else:  # delete vertex
+            self._step_delete_source_vertex(half_edge)
+
+    def _update_half_edge_template_center(self):
+        self.template_center = self._select_half_edge_template_center(self.graph.half_edge_list())
+
+    def is_terminated(self):
+        if self.num_steps >= self.max_steps:
+            return True
+
+        if self.score == 0:
+            return True
+
+        if self.exception_occurred:
+            return True
+
+        return False
+
+    def _get_reward(self):
+        if self.terminated:
+            face_reward = (self.initial_face_score - self.face_score) / self.initial_face_score
+            vertex_reward = (self.initial_vertex_score - self.vertex_score) / self.initial_vertex_score
+            reward = self.face_reward_weight * face_reward + self.vertex_reward_weight * vertex_reward
+            return reward
+        else:
+            return 0
+
+    def step(self, linear_action_index):
+
+        if self.num_steps >= self.max_steps:
+            print("WARNING : NUM STEPS > MAX STEPS!!")  # this should not happen
+
+        half_edge, local_action = self._linear_action_index_to_half_edge_and_action(linear_action_index)
+        self.action_sequence.append((half_edge, local_action))
+
+        try:
+            self._step_half_edge_action(half_edge, local_action)
+            self.num_steps += 1
+            # update the template center after step
+            self._update_half_edge_template_center()
+            self._build_template()
+            self.terminated = self.is_terminated()
+            observation = self._get_obs()
+        except Exception as e:
+            self.exception_occurred = True
+            print("\n\n\tENCOUNTERED ENVIRONMENT EXCPETION\n\n")
+            self._log_exception()
+            self.terminated = True
+            observation = self._get_obs()
+
+        reward = self._get_reward()
+
+        return observation, reward, self.terminated, False, {"score": self.score}
+
+    def _log_exception(self):
+        exception_filename = str(uuid.uuid4()) + ".pkl"
+        self.exception_count += 1
+        exception_filepath = os.path.join(self.logdir, exception_filename)
+        output_data = {"graph": self.initial_graph, "actions": self.action_sequence}
+        with open(exception_filepath, "wb") as output_file:
+            pickle.dump(output_data, output_file)
+
+        print("\n\n\tLOGGED EXCEPTED ENV TO : ", exception_filepath, "\n\n\t")
+
+    def _hard_reset(self):
+        self.polygon_degree = np.random.choice(self.polygon_degree_range)
+        graph, desired_degree = initialize_graph_and_desired_degree(self.polygon_degree, self.desired_angle)
+        self.graph = graph
+        self.vertex_desired_degree = desired_degree
+
+        self.initial_graph = deepcopy(self.graph)
+        self.action_sequence = []
+        self.exception_occurred = False
+
+        self.template_center = self._select_half_edge_template_center(self.graph.half_edge_list())
+        self._build_template()
+
+        self.max_steps = int(self.max_steps_factor * self.polygon_degree)
+        self.num_steps = 0
+
+        self.face_score = self.global_face_score()
+        self.vertex_score = self.global_vertex_score()
+        self.score = self.face_score + self.vertex_score
+
+        self.initial_score = self.score
+        self.initial_face_score = self.face_score
+        self.initial_vertex_score = self.vertex_score
+        self.terminated = self.is_terminated()
+
+        obs = self._get_obs()
+        return obs, {"score": self.score}
+
+    def reset(self, seed=None, options=None):
+        return self._hard_reset()
 
 
 #######################################################################################################################
