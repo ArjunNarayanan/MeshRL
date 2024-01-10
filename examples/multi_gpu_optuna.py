@@ -15,7 +15,7 @@ from joblib import parallel_backend
 import shutil
 
 sys.path.append(os.getcwd())
-from envs.random_polygon_env import RandomPolygonEnv
+from envs.random_polygon_tiler_env import RandomPolygonEnv
 from src.feature_extractor import FeatureExtractor
 from src.policy import CustomActorCriticPolicy
 from src.utils import load_yaml_config
@@ -36,15 +36,16 @@ def sample_ppo_params(trial: optuna.Trial):
     clip_range = trial.suggest_float("clip_range", 0.01, 0.20)
 
     max_grad_norm = trial.suggest_float("max_grad_norm", 0.3, 5.0, log=True)
-    learning_rate = trial.suggest_float("lr", 1e-5, 1, log=True)
+    learning_rate = trial.suggest_float("lr", 1e-5, 0.1, log=True)
 
     # n_steps = 2 ** trial.suggest_int("exponent_n_steps", 10, 15)
-    n_steps = 256
-    batch_size = 2 ** trial.suggest_int("batch_size", 5, 9)
+    # batch_size = 2 ** trial.suggest_int("batch_size", 5, 9)
+    n_steps = 512
+    batch_size = 256
 
     ortho_init = trial.suggest_categorical("ortho_init", [False, True])
     feature_extractor_layers = trial.suggest_int("feature_extractor_layers", 2, 10)
-    feature_extractor_size = 2 ** trial.suggest_int("feature_extractor_size", 5, 10)
+    feature_extractor_size = 2 ** trial.suggest_int("feature_extractor_size", 6, 10)
 
     # Display true values.
     trial.set_user_attr("gamma_", gamma)
@@ -129,7 +130,7 @@ class Objective:
         DEFAULT_HYPERPARAMS = {
             "policy": CustomActorCriticPolicy,
             "env": env,
-            "verbose": 0,
+            "verbose": 1,
         }
 
         kwargs = DEFAULT_HYPERPARAMS.copy()

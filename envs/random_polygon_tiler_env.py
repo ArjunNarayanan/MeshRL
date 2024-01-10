@@ -138,6 +138,11 @@ class RandomPolygonEnv(gym.Env):
     def get_num_actions_per_half_edge(max_edge_addition_steps):
         # 3 more actions are - delete edge, insert vertex, delete vertex
         return max_edge_addition_steps + 3
+    
+    @staticmethod
+    def get_num_actions_per_halfedge(max_edge_addition_steps):
+        # 3 more actions are - delete edge, insert vertex, delete vertex
+        return max_edge_addition_steps + 3
 
     @staticmethod
     def get_feature_size():
