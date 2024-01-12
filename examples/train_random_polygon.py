@@ -83,7 +83,11 @@ if __name__ == "__main__":
     eval_env = make_vec_env(initialize_environment, 1)
 
     eval_config = config["evaluator"]
-    eval_freq = eval_config["eval_freq"]
+    num_evaluations = eval_config["num_evaluations"]
+    total_timesteps = config["total_timesteps"]
+    eval_freq = int(total_timesteps/num_evaluations)
+    print("EVAL FREQUENCY : ", eval_freq)
+
     eval_callback = EvalCallback(
         eval_env,
         best_model_save_path=output_dir,
@@ -92,6 +96,5 @@ if __name__ == "__main__":
         deterministic=False,
         render=False
     )
-
-    total_timesteps = config["total_timesteps"]
+    
     model.learn(total_timesteps=total_timesteps, callback=eval_callback)
