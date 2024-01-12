@@ -216,6 +216,7 @@ if __name__ == "__main__":
         study_name=study_name,
         direction="maximize",
         storage=storage,
+        load_if_exists=True
     )
 
     NUM_GPUS = torch.cuda.device_count()
