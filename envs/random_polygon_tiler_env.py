@@ -32,6 +32,7 @@ class RandomPolygonEnv(gym.Env):
 
         self.max_edge_addition_steps = max_edge_addition_steps
         self.num_actions_per_half_edge = self.get_num_actions_per_half_edge(max_edge_addition_steps)
+        self.num_actions_per_halfedge = self.num_actions_per_half_edge
         self.total_num_actions_in_template = self.template_size * self.num_actions_per_half_edge
 
         self.face_desired_degree = face_desired_degree
