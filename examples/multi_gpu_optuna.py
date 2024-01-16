@@ -29,7 +29,11 @@ def initialize_environment():
 
 def sample_ppo_params(trial: optuna.Trial):
     """Sampler for PPO hyperparameters."""
-    gamma = 1.0 - trial.suggest_float("gamma", 0.0001, 0.1, log=True)
+    gamma = 1.0
+    n_steps = 512
+    batch_size = 256
+
+    # gamma = 1.0 - trial.suggest_float("gamma", 0.0001, 0.1, log=True)
     gae_lambda = 1.0 - trial.suggest_float("gae_lambda", 0.001, 0.2, log=True)
     ent_coef = trial.suggest_float("ent_coef", 0.00000001, 0.5, log=True)
     vf_coef = trial.suggest_float("vf_coef", 0.00000001, 0.5, log=True)
@@ -40,8 +44,7 @@ def sample_ppo_params(trial: optuna.Trial):
 
     # n_steps = 2 ** trial.suggest_int("exponent_n_steps", 10, 15)
     # batch_size = 2 ** trial.suggest_int("batch_size", 5, 9)
-    n_steps = 512
-    batch_size = 256
+
 
     ortho_init = trial.suggest_categorical("ortho_init", [False, True])
     feature_extractor_layers = trial.suggest_int("feature_extractor_layers", 2, 10)
