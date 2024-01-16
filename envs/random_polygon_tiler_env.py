@@ -80,7 +80,7 @@ class RandomPolygonEnv(gym.Env):
         self.num_features = self.get_feature_size()
 
         self.action_space = Discrete(self.num_actions_per_half_edge)
-        self.clamp_features_max = 10
+        self.clamp_features_max = 5
         self.observation_space = Dict(
             {
                 "features": Box(low=0, high=self.clamp_features_max, shape=(self.template_size, self.num_features)),
