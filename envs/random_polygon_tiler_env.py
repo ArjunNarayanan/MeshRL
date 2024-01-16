@@ -139,7 +139,7 @@ class RandomPolygonEnv(gym.Env):
     def get_num_actions_per_half_edge(max_edge_addition_steps):
         # 3 more actions are - delete edge, insert vertex, delete vertex
         return max_edge_addition_steps + 3
-    
+
     @staticmethod
     def get_num_actions_per_halfedge(max_edge_addition_steps):
         # 3 more actions are - delete edge, insert vertex, delete vertex
@@ -166,7 +166,7 @@ class RandomPolygonEnv(gym.Env):
         self.index_to_half_edge = self.graph.knn_half_edges(self.template_center, self.template_size)
         self.half_edge_to_index = {half_edge: idx for idx, half_edge in enumerate(self.index_to_half_edge)}
 
-    def _get_feature_matrix(self):
+    def _get_feature_matrix_archive(self):
         matrix = np.zeros((self.template_size, self.num_features), dtype=np.float32)
         for order, hidx in enumerate(self.index_to_half_edge):
             vidx = self.graph.source_vertex(hidx, tag=False)
@@ -184,6 +184,36 @@ class RandomPolygonEnv(gym.Env):
                 self.face_desired_degree,
                 is_user_defined_vertex
             ]
+
+        return matrix
+
+    def _get_user_defined_vertex_flag(self, vidx):
+        if self.graph.is_user_defined_vertex(vidx):
+            return 1.0
+        else:
+            return 0.0
+
+    def _get_feature_matrix(self):
+        matrix = np.zeros((self.template_size, self.num_features), dtype=np.float32)
+
+        num_template_halfedges = len(self.index_to_half_edge)
+
+        source_vertices = [self.graph.source_vertex(hidx, tag=False) for hidx in self.index_to_half_edge]
+        vertex_degrees = np.array(self.graph.vertex_degree_of_list(source_vertices))
+        vertex_desired_degrees = np.array([self.vertex_desired_degree[vidx] for vidx in source_vertices])
+        user_defined_flags = np.array([self._get_user_defined_vertex_flag(vidx) for vidx in source_vertices])
+
+        face_indices = [self.graph.face(hidx) for hidx in self.index_to_half_edge]
+        face_degrees = np.array(self.graph.face_degree_of_list(face_indices))
+
+        vertex_features = (vertex_degrees / vertex_desired_degrees).clip(0, self.clamp_features_max)
+        face_features = (face_degrees / self.face_desired_degree).clip(0, self.clamp_features_max)
+
+        matrix[:num_template_halfedges, 0] = vertex_features
+        matrix[:num_template_halfedges, 1] = vertex_desired_degrees
+        matrix[:num_template_halfedges, 2] = face_features
+        matrix[:num_template_halfedges, 3] = self.face_desired_degree
+        matrix[:num_template_halfedges, 4] = user_defined_flags
 
         return matrix
 

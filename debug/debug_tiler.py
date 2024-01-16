@@ -1,10 +1,26 @@
-from src.tiler import Tiler
+from envs.random_polygon_tiler_env import RandomPolygonEnv
+import numpy as np
 
-
-if __name__=="__main__":
-    graph = Tiler.from_face_loops(
-        [
-            [0, 1, 2, 1, 3, 4, 5]
-        ]
+def setUp():
+    env = RandomPolygonEnv(
+        3,
+        [6],
+        template_size=6,
     )
-    graph.insert_vertex(1)
+    for vidx, _ in env.vertex_desired_degree.items():
+        env.vertex_desired_degree[vidx] = 3
+    env._update_scores_on_reset()
+    return env
+
+
+env = setUp()
+f = env._get_feature_matrix()
+
+test_matrix = np.zeros((env.template_size, 5), dtype=np.float32)
+test_matrix[:6, :] = [
+    2 / 3,
+    3,
+    6 / 3,
+    3,
+    1
+]

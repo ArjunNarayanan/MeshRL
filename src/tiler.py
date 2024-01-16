@@ -314,9 +314,21 @@ class Tiler(nx.MultiGraph):
         degree = self.degree(vidx) // 2
         return degree
 
+    def vertex_degree_of_list(self, vertex_list):
+        vertex_list = [self._ensure_tag_form(vidx, self.vertex_tag) for vidx in vertex_list]
+        degree_dict = self.degree(vertex_list)
+        degrees = [degree_dict[vidx] // 2 for vidx in vertex_list]
+        return degrees
+
     def face_degree(self, fidx):
         fidx = self._ensure_tag_form(fidx, self.face_tag)
         return self.degree(fidx)
+
+    def face_degree_of_list(self, face_list):
+        face_list = [self._ensure_tag_form(fidx, self.face_tag) for fidx in face_list]
+        degree_dict = self.degree(face_list)
+        degrees = [degree_dict[fidx] for fidx in face_list]
+        return degrees
 
     def half_edge_on_boundary(self, hidx):
         tidx = self.twin_half_edge(hidx)
