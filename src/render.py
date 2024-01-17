@@ -127,3 +127,5 @@ class Renderer:
             self.plot_vertices()
         if self.label_halfedge:
             self.plot_all_halfedges()
+
+        self.fig.tight_layout()

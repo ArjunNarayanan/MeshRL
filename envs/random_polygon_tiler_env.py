@@ -19,7 +19,9 @@ class RandomPolygonEnv(gym.Env):
             logdir=None,
             max_edge_addition_steps=3,
             face_reward_weight=1,
-            vertex_reward_weight=1
+            vertex_reward_weight=1,
+            incremental_reward=False
+
     ):
         super().__init__()
         self.polygon_degree_range = polygon_degree_range
@@ -28,6 +30,7 @@ class RandomPolygonEnv(gym.Env):
 
         self.max_steps_factor = max_steps_factor
         self.max_steps = int(self.max_steps_factor * self.polygon_degree)
+        self.incremental_reward = incremental_reward
         self.logdir = logdir
 
         self.max_edge_addition_steps = max_edge_addition_steps
@@ -57,11 +60,10 @@ class RandomPolygonEnv(gym.Env):
         self.initial_score = self.score
         self.initial_face_score = self.face_score
         self.initial_vertex_score = self.vertex_score
+        self.reward = 0
 
         self.exception_occurred = False
         self.terminated = self.is_terminated()
-
-        self.no_action_reward = -4
 
         # Attributes for excpetion handling
         self.initial_graph = deepcopy(self.graph)
@@ -106,6 +108,7 @@ class RandomPolygonEnv(gym.Env):
         logdir = config.get("logdir", None)
         face_reward_weight = config.get("face_reward_weight", 1)
         vertex_reward_weight = config.get("vertex_reward_weight", 1)
+        incremental_reward = config.get("incremental_reward", False)
 
         return cls(
             face_desired_degree,
@@ -115,7 +118,8 @@ class RandomPolygonEnv(gym.Env):
             logdir=logdir,
             max_edge_addition_steps=max_edge_addition_steps,
             face_reward_weight=face_reward_weight,
-            vertex_reward_weight=vertex_reward_weight
+            vertex_reward_weight=vertex_reward_weight,
+            incremental_reward=incremental_reward
         )
 
     def _face_score(self, fidx):
@@ -315,10 +319,11 @@ class RandomPolygonEnv(gym.Env):
             }
             return obs
 
-    def _update_scores(self, face_reward, vertex_reward):
+    def _update_scores_and_reward(self, face_reward, vertex_reward):
         self.face_score -= face_reward
         self.vertex_score -= vertex_reward
         self.score = self.face_score + self.vertex_score
+        self.reward = self.face_reward_weight * face_reward + self.vertex_reward_weight * vertex_reward
 
     def _step_insert_edge(self, hidx, num_steps):
         if self.graph.is_valid_edge_insert(hidx, num_steps):
@@ -348,7 +353,7 @@ class RandomPolygonEnv(gym.Env):
                             (abs(source_vertex_degree - source_vertex_desired_degree) +
                              abs(prev_source_vertex_degree - prev_source_vertex_desired_degree))
 
-            self._update_scores(face_reward, vertex_reward)
+            self._update_scores_and_reward(face_reward, vertex_reward)
 
         return
 
@@ -384,7 +389,7 @@ class RandomPolygonEnv(gym.Env):
                                abs(twin_face_degree + 1 - self.face_desired_degree))
                 vertex_reward = 0 - abs(2 - self.interior_vertex_desired_degree)
 
-            self._update_scores(face_reward, vertex_reward)
+            self._update_scores_and_reward(face_reward, vertex_reward)
 
         return
 
@@ -416,7 +421,7 @@ class RandomPolygonEnv(gym.Env):
                              abs(target_vertex_degree - target_desired_degree)) - \
                             (abs(source_vertex_degree - 1 - source_desired_degree) +
                              abs(target_vertex_degree - 1 - target_desired_degree))
-            self._update_scores(face_reward, vertex_reward)
+            self._update_scores_and_reward(face_reward, vertex_reward)
 
         return
 
@@ -455,7 +460,7 @@ class RandomPolygonEnv(gym.Env):
                                abs(twin_face_degree - 1 - self.face_desired_degree))
                 vertex_reward = abs(source_vertex_degree - source_vertex_desired_degree)
 
-            self._update_scores(face_reward, vertex_reward)
+            self._update_scores_and_reward(face_reward, vertex_reward)
             self.vertex_desired_degree.pop(source_vertex)
 
     def _update_scores_on_reset(self):
@@ -493,7 +498,7 @@ class RandomPolygonEnv(gym.Env):
 
         return False
 
-    def _get_reward(self):
+    def _get_terminal_reward(self):
         if self.terminated:
             face_reward = (self.initial_face_score - self.face_score) / self.initial_face_score
             vertex_reward = (self.initial_vertex_score - self.vertex_score) / self.initial_vertex_score
@@ -501,6 +506,15 @@ class RandomPolygonEnv(gym.Env):
             return reward
         else:
             return 0
+
+    def _get_incremental_reward(self):
+        return self.reward
+
+    def _get_reward(self):
+        if self.incremental_reward:
+            return self._get_incremental_reward()
+        else:
+            return self._get_terminal_reward()
 
     def step(self, linear_action_index):
 

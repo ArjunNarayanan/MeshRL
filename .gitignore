@@ -7,3 +7,4 @@ job_scripts/
 *.out
 *.db
 *.pkl
+*.pdf
