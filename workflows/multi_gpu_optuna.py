@@ -209,8 +209,10 @@ if __name__ == "__main__":
 
     output_folder = os.path.dirname(config_filename)
     storage_path = os.path.join(output_folder, "optuna-journal.log")
+    
     storage = JournalStorage(JournalFileStorage(storage_path))
     print("\nUsing storage : ", storage_path)
+    
     study_name = config["study_name"]
 
     study = optuna.create_study(
