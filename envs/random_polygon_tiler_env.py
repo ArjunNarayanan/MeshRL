@@ -171,7 +171,7 @@ class RandomPolygonEnv(gym.Env):
         self.index_to_half_edge = self.graph.knn_half_edges(self.template_center, self.template_size)
         self.half_edge_to_index = {half_edge: idx for idx, half_edge in enumerate(self.index_to_half_edge)}
 
-    def _get_feature_matrix_archive(self):
+    def _get_feature_matrix(self):
         matrix = np.zeros((self.template_size, self.num_features), dtype=np.float32)
         for order, hidx in enumerate(self.index_to_half_edge):
             vidx = self.graph.source_vertex(hidx, tag=False)
@@ -198,7 +198,7 @@ class RandomPolygonEnv(gym.Env):
         else:
             return 0.0
 
-    def _get_feature_matrix(self):
+    def _get_feature_matrix_archive(self):
         matrix = np.zeros((self.template_size, self.num_features), dtype=np.float32)
 
         num_template_halfedges = len(self.index_to_half_edge)
