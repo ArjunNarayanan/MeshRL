@@ -26,6 +26,12 @@ def initialize_environment():
     env = RandomPolygonEnv.from_config(env_config)
     return env
 
+def initialize_eval_environment():
+    env_config = config["environment"]
+    env_config["incremental_reward"] = False
+    env = RandomPolygonEnv.from_config(env_config)
+    return env
+
 
 def sample_ppo_params(trial: optuna.Trial):
     """Sampler for PPO hyperparameters."""
@@ -143,7 +149,7 @@ class Objective:
 
         model = PPO(**kwargs)
 
-        eval_env = make_vec_env(initialize_environment, 1)
+        eval_env = make_vec_env(initialize_eval_environment, 1)
         eval_callback = TrialEvalCallback(
             eval_env,
             trial,
@@ -209,8 +215,10 @@ if __name__ == "__main__":
 
     output_folder = os.path.dirname(config_filename)
     storage_path = os.path.join(output_folder, "optuna-journal.log")
+    
     storage = JournalStorage(JournalFileStorage(storage_path))
     print("\nUsing storage : ", storage_path)
+    
     study_name = config["study_name"]
 
     study = optuna.create_study(
