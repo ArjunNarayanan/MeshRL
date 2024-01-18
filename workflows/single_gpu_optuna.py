@@ -189,7 +189,7 @@ if __name__ == "__main__":
     gpu_id = args.gpu
     config = load_yaml_config(config_filename)
 
-    N_TRIALS = 50
+    N_TRIALS = int(config["num_trials"])
     N_STARTUP_TRIALS = 5
     N_EVALUATIONS = 500
     N_EVAL_EPISODES = 100
