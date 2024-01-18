@@ -40,6 +40,8 @@ class Tiler(nx.MultiGraph):
         self.user_defined_vertices = set()
 
         self.half_edges = dict()
+        self.vertex_degrees = dict()
+        self.face_degrees = dict()
 
     @classmethod
     def from_face_loops(cls, face_loops, vertex_coordinates=None):
@@ -78,6 +80,8 @@ class Tiler(nx.MultiGraph):
         graph.initialize_half_edge_face_associations(face_loops)
         graph.initialize_twin_associations()
         graph.initialize_boundary_source_target_associations()
+        graph.initialize_vertex_degrees()
+        graph.initialize_face_degrees()
 
         return graph
 
@@ -228,6 +232,16 @@ class Tiler(nx.MultiGraph):
             boundary_source.append(twin_target)
             boundary_target.append(twin_source)
 
+    def initialize_vertex_degrees(self):
+        vertices = self.vertex_list(tag=True)
+        degrees = self.vertex_degree_of_list(vertices)
+        self.vertex_degrees.update(zip(vertices, degrees))
+
+    def initialize_face_degrees(self):
+        faces = self.face_list(tag=True)
+        degrees = self.face_degree_of_list(faces)
+        self.face_degrees.update(zip(faces, degrees))
+
     def _number_of_nodes(self, type):
         return sum(1 for vert, data in self.nodes(data=True) if data.get("type") == type)
 
@@ -311,7 +325,10 @@ class Tiler(nx.MultiGraph):
 
     def vertex_degree(self, vidx):
         vidx = self._ensure_tag_form(vidx, self.vertex_tag)
-        degree = self.degree(vidx) // 2
+
+        # degree = self.degree(vidx) // 2
+        degree = self.vertex_degrees[vidx]
+
         return degree
 
     def vertex_degree_of_list(self, vertex_list):
@@ -378,6 +395,10 @@ class Tiler(nx.MultiGraph):
         self.add_node(new_face_idx, type="face")
         self.next_face_index += 1
         return new_face_idx
+
+    def set_face_degree(self, fidx, degree):
+        fidx = self._ensure_tag_form(fidx, self.face_tag)
+        self.face_degrees[fidx] = degree
 
     def create_half_edge(self, next_half_edge_idx, prev_half_edge_idx):
         next_half_edge_idx = self._ensure_tag_form(next_half_edge_idx, self.half_edge_tag)
@@ -453,8 +474,12 @@ class Tiler(nx.MultiGraph):
 
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
         face_idx = self.face(hidx)
+        face_degree = self.face_degree(face_idx)
+        self.set_face_degree(face_idx, face_degree - 2)
 
         new_face_idx = self.create_face()
+        self.set_face_degree(new_face_idx, k + 2)
+
         # remove edges to current face and add edge to new face
         current_half_edge = hidx
         for count in range(k + 1):
@@ -466,6 +491,11 @@ class Tiler(nx.MultiGraph):
         new_face_prev_idx = self.previous_half_edge(current_half_edge)
         old_face_next_idx = current_half_edge
         old_face_prev_idx = self.previous_half_edge(hidx)
+
+        new_face_source_vertex = self.target_vertex(new_face_prev_idx)
+        new_face_target_vertex = self.source_vertex(hidx)
+        self.vertex_degrees[new_face_source_vertex] += 1
+        self.vertex_degrees[new_face_target_vertex] += 1
 
         new_face_new_idx = self.create_half_edge(new_face_next_idx, new_face_prev_idx)
         old_face_new_idx = self.create_half_edge(old_face_next_idx, old_face_prev_idx)
@@ -494,6 +524,10 @@ class Tiler(nx.MultiGraph):
         self.next_vertex_index += 1
         return new_vertex_idx
 
+    def set_vertex_degree(self, vidx, degree):
+        vidx = self._ensure_tag_form(vidx, self.vertex_tag)
+        self.vertex_degrees[vidx] = degree
+
     def set_target_vertex(self, hidx, vidx):
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
         vidx = self._ensure_tag_form(vidx, self.vertex_tag)
@@ -518,6 +552,7 @@ class Tiler(nx.MultiGraph):
 
         new_vertex_coord = self.get_new_vertex_coordinate(current_target_vertex, current_source_vertex)
         new_vertex_idx = self.create_vertex(new_vertex_coord)
+        self.set_vertex_degree(new_vertex_idx, 2)
 
         next_half_edge = self.next_half_edge(hidx)
         self.set_target_vertex(hidx, new_vertex_idx)
@@ -525,6 +560,9 @@ class Tiler(nx.MultiGraph):
         new_half_edge = self.create_half_edge(next_half_edge, hidx)
         new_boundary_edge = self.create_boundary_half_edge(new_vertex_idx, current_target_vertex)
         self.associate_half_edge_twin(new_half_edge, new_boundary_edge)
+
+        face_idx = self.face(hidx)
+        self.face_degrees[face_idx] += 1
 
         return new_vertex_idx
 
@@ -541,12 +579,18 @@ class Tiler(nx.MultiGraph):
         current_source_vertex = self.source_vertex(hidx)
         new_vertex_coord = self.get_new_vertex_coordinate(current_target_vertex, current_source_vertex)
         new_vertex_idx = self.create_vertex(new_vertex_coord)
+        self.set_vertex_degree(new_vertex_idx, 2)
 
         self.set_target_vertex(hidx, new_vertex_idx)
 
         new_next_hidx = self.create_half_edge(next_hidx, hidx)
         new_twin_prev_hidx = self.create_half_edge(twin_hidx, twin_prev_hidx)
         self.associate_half_edge_twin(new_next_hidx, new_twin_prev_hidx)
+
+        face_idx = self.face(hidx)
+        self.face_degrees[face_idx] += 1
+        twin_face_idx = self.face(twin_hidx)
+        self.face_degrees[twin_face_idx] += 1
 
         return new_vertex_idx
 
@@ -558,11 +602,6 @@ class Tiler(nx.MultiGraph):
         else:
             new_vertex = self._insert_interior_vertex(hidx)
 
-        # if tag:
-        #     return new_vertex
-        # else:
-        #     return self._ensure_untagged_form(new_vertex)
-
     def _delete_vertex_coordinates(self, vidx):
         vidx = self._ensure_untagged_form(vidx)
         if self.vertex_coordinates is not None:
@@ -573,6 +612,7 @@ class Tiler(nx.MultiGraph):
     def _delete_half_edge(self, hidx):
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
         twin = self.twin_half_edge(hidx)
+
         self.remove_node(hidx)
         self.remove_node(twin)
         self.half_edges.pop(hidx)
@@ -581,6 +621,7 @@ class Tiler(nx.MultiGraph):
     def _delete_vertex(self, vidx):
         vidx = self._ensure_tag_form(vidx, self.vertex_tag)
         self.remove_node(vidx)
+        self.vertex_degrees.pop(vidx)
         self._delete_vertex_coordinates(vidx)
 
     def _delete_boundary_vertex(self, hidx):
@@ -597,6 +638,9 @@ class Tiler(nx.MultiGraph):
         target_vertex = self.target_vertex(hidx)
         self.set_target_vertex(prev_half_edge, target_vertex)
         self.associate_previous_next_half_edge(prev_half_edge, next_half_edge)
+
+        face_idx = self.face(hidx)
+        self.face_degrees[face_idx] -= 1
 
         self._delete_half_edge(hidx)
         self._delete_vertex(source_vertex)
@@ -619,6 +663,11 @@ class Tiler(nx.MultiGraph):
         self.set_target_vertex(prev_half_edge, target_vertex)
         self.associate_previous_next_half_edge(prev_half_edge, next_half_edge)
         self.associate_previous_next_half_edge(prev_twin_half_edge, next_twin_half_edge)
+
+        face_idx = self.face(hidx)
+        self.face_degrees[face_idx] -= 1
+        twin_face_idx = self.face(twin_half_edge)
+        self.face_degrees[twin_face_idx] -= 1
 
         self._delete_half_edge(hidx)
         self._delete_vertex(source_vertex)
@@ -689,15 +738,27 @@ class Tiler(nx.MultiGraph):
         twin_edge = self.twin_half_edge(hidx)
         prev_twin = self.previous_half_edge(twin_edge)
         next_twin = self.next_half_edge(twin_edge)
+        source_vertex = self.source_vertex(hidx)
+        target_vertex = self.target_vertex(hidx)
+
+        self.vertex_degrees[source_vertex] -= 1
+        self.vertex_degrees[target_vertex] -= 1
 
         current_face = self.face(hidx)
         twin_face = self.face(twin_edge)
+
+        current_face_degree = self.face_degree(current_face)
+        twin_face_degree = self.face_degree(twin_face)
+        self.set_face_degree(current_face, current_face_degree + twin_face_degree - 2)
 
         # Associate all edges from neighboring face with current face and delete neighboring face
         twin_face_edges = self._half_edges_of_face(twin_face)
         for half_edge in twin_face_edges:
             self.associate_half_edge_face(half_edge, current_face)
+
+        # delete the twin face
         self.remove_node(twin_face)
+        self.face_degrees.pop(twin_face)
 
         self.associate_previous_next_half_edge(prev_edge, next_twin)
         self.associate_previous_next_half_edge(prev_twin, next_edge)

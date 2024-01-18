@@ -48,10 +48,15 @@ def iterate_vertex_degree(graph):
 def bunch_vertex_degree(graph):
     vertices = [(vidx, graph.vertex_tag) for vidx in range(16)]
     return graph.degree(vertices)
+    
+
+def dict_vertex_degree(graph):
+    vertices = [(vidx, graph.vertex_tag) for vidx in range(16)]
+    return [graph.vertex_degrees[vidx] for vidx in vertices]
 
 
 
 graph = initialize_graph()
 """
 
-timeit.timeit("bunch_vertex_degree(graph)", setup=setup, number=10000)
+timeit.timeit("iterate_vertex_degree(graph)", setup=setup, number=10000)
