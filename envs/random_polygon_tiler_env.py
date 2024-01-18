@@ -20,8 +20,8 @@ class RandomPolygonEnv(gym.Env):
             max_edge_addition_steps=3,
             face_reward_weight=0.5,
             vertex_reward_weight=0.5,
-            incremental_reward=False
-
+            incremental_reward=False,
+            scale_reward=False
     ):
         super().__init__()
         self.polygon_degree_range = polygon_degree_range
@@ -31,6 +31,7 @@ class RandomPolygonEnv(gym.Env):
         self.max_steps_factor = max_steps_factor
         self.max_steps = int(self.max_steps_factor * self.polygon_degree)
         self.incremental_reward = incremental_reward
+        self.scale_reward = scale_reward
         self.logdir = logdir
 
         self.max_edge_addition_steps = max_edge_addition_steps
@@ -106,9 +107,10 @@ class RandomPolygonEnv(gym.Env):
         max_steps_factor = config["max_steps_factor"]
         max_edge_addition_steps = config.get("max_edge_addition_steps", 3)
         logdir = config.get("logdir", None)
-        face_reward_weight = config.get("face_reward_weight", 1)
-        vertex_reward_weight = config.get("vertex_reward_weight", 1)
+        face_reward_weight = config.get("face_reward_weight", 0.5)
+        vertex_reward_weight = config.get("vertex_reward_weight", 0.5)
         incremental_reward = config.get("incremental_reward", False)
+        scale_reward = config["scale_reward"]
 
         return cls(
             face_desired_degree,
@@ -119,7 +121,8 @@ class RandomPolygonEnv(gym.Env):
             max_edge_addition_steps=max_edge_addition_steps,
             face_reward_weight=face_reward_weight,
             vertex_reward_weight=vertex_reward_weight,
-            incremental_reward=incremental_reward
+            incremental_reward=incremental_reward,
+            scale_reward=scale_reward
         )
 
     def _face_score(self, fidx):
@@ -323,7 +326,12 @@ class RandomPolygonEnv(gym.Env):
         self.face_score -= face_reward
         self.vertex_score -= vertex_reward
         self.score = self.face_score + self.vertex_score
-        self.reward = self.face_reward_weight * face_reward + self.vertex_reward_weight * vertex_reward
+
+        if self.scale_reward:
+            self.reward = self.face_reward_weight * face_reward / self.initial_face_score + \
+                          self.vertex_reward_weight * vertex_reward / self.initial_vertex_score
+        else:
+            self.reward = self.face_reward_weight * face_reward + self.vertex_reward_weight * vertex_reward
 
     def _step_insert_edge(self, hidx, num_steps):
         if self.graph.is_valid_edge_insert(hidx, num_steps):
