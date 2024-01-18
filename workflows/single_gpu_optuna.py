@@ -10,8 +10,6 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 import torch
 import os
 import sys
-from multiprocessing import Manager
-from joblib import parallel_backend
 
 sys.path.append(os.getcwd())
 from envs.random_polygon_tiler_env import RandomPolygonEnv
@@ -56,9 +54,9 @@ def sample_ppo_params(trial: optuna.Trial):
     feature_extractor_size = 2 ** trial.suggest_int("feature_extractor_size", 6, 10)
 
     # Display true values.
-    trial.set_user_attr("gamma_", gamma)
-    trial.set_user_attr("gae_lambda_", gae_lambda)
-    trial.set_user_attr("n_steps", n_steps)
+    # trial.set_user_attr("gamma_", gamma)
+    # trial.set_user_attr("n_steps", n_steps)
+    # trial.set_user_attr("batch_size_", batch_size)
 
     policy_kwargs = dict(
         features_extractor_class=FeatureExtractor,
@@ -91,8 +89,8 @@ class TrialEvalCallback(EvalCallback):
             self,
             eval_env,
             trial: optuna.Trial,
+            eval_freq,
             n_eval_episodes: int = 100,
-            eval_freq: int = 10000,
             deterministic: bool = False,
             verbose: int = 0,
             best_model_save_path=None,
@@ -122,11 +120,10 @@ class TrialEvalCallback(EvalCallback):
 
 
 class Objective:
-    def __init__(self, gpu_queue):
-        self.gpu_queue = gpu_queue
+    def __init__(self, gpu_id):
+        self.gpu_id = gpu_id
 
     def __call__(self, trial):
-        gpu_id = self.gpu_queue.get()
 
         env = make_vec_env(
             initialize_environment,
@@ -143,7 +140,7 @@ class Objective:
 
         kwargs = DEFAULT_HYPERPARAMS.copy()
         kwargs.update(sample_ppo_params(trial))
-        kwargs["device"] = torch.device("cuda:" + str(gpu_id))
+        kwargs["device"] = torch.device("cuda:" + str(self.gpu_id))
         kwargs["tensorboard_log"] = trial_logdir
 
         model = PPO(**kwargs)
@@ -152,8 +149,8 @@ class Objective:
         eval_callback = TrialEvalCallback(
             eval_env,
             trial,
-            n_eval_episodes=N_EVAL_EPISODES,
             eval_freq=EVAL_FREQ,
+            n_eval_episodes=N_EVAL_EPISODES,
             deterministic=False,
             verbose=1,
         )
@@ -170,9 +167,6 @@ class Objective:
             model.env.close()
             eval_env.close()
 
-        # Return GPU ID to the queue
-        self.gpu_queue.put(gpu_id)
-
         # Tell the optimizer that the trial failed.
         if nan_encountered:
             return float("nan")
@@ -185,12 +179,14 @@ class Objective:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Optimize PPO hyperparams with Optuna")
-    parser.add_argument("-num_envs", default=1, type=int)
+    parser.add_argument("-num_envs", default=10, type=int)
     parser.add_argument("-config", required=True)
+    parser.add_argument("-gpu", default=0, type=int)
     args = parser.parse_args()
 
     NUM_ENVS = args.num_envs
     config_filename = args.config
+    gpu_id = args.gpu
     config = load_yaml_config(config_filename)
 
     N_TRIALS = 50
@@ -212,13 +208,15 @@ if __name__ == "__main__":
     # Do not prune before 1/3 of the max budget is used.
     pruner = MedianPruner(n_startup_trials=N_STARTUP_TRIALS, n_warmup_steps=N_EVALUATIONS // 3)
 
+    study_name = config["study_name"]
+
     output_folder = os.path.dirname(config_filename)
-    storage_path = os.path.join(output_folder, "optuna-journal.log")
+    journal_file_name = study_name + ".log"
+    storage_path = os.path.join(output_folder, journal_file_name)
 
     storage = JournalStorage(JournalFileStorage(storage_path))
     print("\nUsing storage : ", storage_path)
 
-    study_name = config["study_name"]
 
     study = optuna.create_study(
         sampler=sampler,
@@ -229,24 +227,14 @@ if __name__ == "__main__":
         load_if_exists=True
     )
 
-    NUM_GPUS = torch.cuda.device_count()
-    print("NUM GPUs : ", NUM_GPUS)
-
-    with Manager() as manager:
-        gpu_queue = manager.Queue()
-        for idx in range(NUM_GPUS):
-            gpu_queue.put(idx)
-
-        with parallel_backend("multiprocessing", n_jobs=NUM_GPUS):
-            try:
-                study.optimize(
-                    Objective(gpu_queue),
-                    n_trials=N_TRIALS,
-                    n_jobs=NUM_GPUS,
-                    show_progress_bar=True,
-                )
-            except KeyboardInterrupt:
-                pass
+    try:
+        study.optimize(
+            Objective(gpu_id),
+            n_trials=N_TRIALS,
+            show_progress_bar=True,
+        )
+    except KeyboardInterrupt:
+        pass
 
     print("Number of finished trials: ", len(study.trials))
 

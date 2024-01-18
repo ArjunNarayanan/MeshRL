@@ -18,8 +18,8 @@ class RandomPolygonEnv(gym.Env):
             max_steps_factor=3,
             logdir=None,
             max_edge_addition_steps=3,
-            face_reward_weight=1,
-            vertex_reward_weight=1,
+            face_reward_weight=0.5,
+            vertex_reward_weight=0.5,
             incremental_reward=False
 
     ):
