@@ -7,7 +7,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 
 sys.path.append(os.getcwd())
 from envs.random_polygon_tiler_env import RandomPolygonEnv
-from src.feature_extractor import FeatureExtractor
+from src.feature_extractor import feature_extractor_initializer
 from src.policy import CustomActorCriticPolicy
 from src.utils import load_yaml_config
 
@@ -26,36 +26,31 @@ def obs_as_tensor(obs):
     return _obs
 
 
-if __name__=="__main__":
-    env_config = "../experiments/tiler-random-polygon/triangle/models/tri-5-50-scaled/config.yml"
-    config = load_yaml_config(env_config)
+env_config = "experiments/tiler-random-polygon/triangle/models/tri-5-50-convolution/config.yml"
+config = load_yaml_config(env_config)
 
-    feature_extractor_layers = config["feature_extractor"]["number_of_layers"]
-    feature_extractor_size = config["feature_extractor"]["output_features"]
-    policy_kwargs = dict(
-        features_extractor_class=FeatureExtractor,
-        features_extractor_kwargs=dict(
-            input_features=RandomPolygonEnv.get_feature_size(),
-            output_features=feature_extractor_size,
-            number_of_layers=feature_extractor_layers,
-        ),
-        use_critic=False,
-        ortho_init=config["feature_extractor"]["ortho_init"]
-    )
+features_extractor_class, features_extractor_kwargs = feature_extractor_initializer(config["feature_extractor"])
+features_extractor_kwargs.update({"input_features": RandomPolygonEnv.get_feature_size()})
+policy_kwargs = dict(
+    features_extractor_class=features_extractor_class,
+    features_extractor_kwargs=features_extractor_kwargs,
+    use_critic=config["policy"]["use_critic"],
+    ortho_init=config["policy"]["ortho_init"]
+)
 
-    ppo_config = config["PPO"]
-    ppo_config["policy_kwargs"] = policy_kwargs
-    ppo_config["verbose"] = 1
+ppo_config = config["PPO"]
+ppo_config["policy_kwargs"] = policy_kwargs
+ppo_config["verbose"] = 1
 
-    env = make_vec_env(
-        initialize_environment,
-        5,
-        vec_env_cls=DummyVecEnv
-    )
-    model = PPO(
-        CustomActorCriticPolicy,
-        env,
-        **ppo_config,
-    )
+env = make_vec_env(
+    initialize_environment,
+    5,
+    vec_env_cls=DummyVecEnv
+)
+model = PPO(
+    CustomActorCriticPolicy,
+    env,
+    **ppo_config,
+)
 
-    model.learn(total_timesteps=1000)
+# model.learn(total_timesteps=1000)

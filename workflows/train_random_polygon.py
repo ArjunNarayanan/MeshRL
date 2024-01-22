@@ -9,7 +9,7 @@ import datetime
 
 sys.path.append(os.getcwd())
 from envs.random_polygon_tiler_env import RandomPolygonEnv
-from src.feature_extractor import FeatureExtractor
+from src.feature_extractor import feature_extractor_initializer
 from src.policy import CustomActorCriticPolicy
 from src.utils import load_yaml_config
 
@@ -28,6 +28,7 @@ def initialize_environment():
     env_config = config["environment"]
     env = RandomPolygonEnv.from_config(env_config)
     return env
+
 
 def initialize_eval_environment():
     env_config = config["environment"]
@@ -50,7 +51,7 @@ if __name__ == "__main__":
     num_envs = args.num_envs
     if num_envs > 1:
         env = make_vec_env(
-            initialize_environment, 
+            initialize_environment,
             num_envs,
             vec_env_cls=SubprocVecEnv,
         )
@@ -65,33 +66,35 @@ if __name__ == "__main__":
     make_output_dir_if_necessary(output_dir)
     print("\n\tUSING OUTPUT DIR: ", output_dir, "\n")
 
-
     feature_extractor_layers = config["feature_extractor"]["number_of_layers"]
     feature_extractor_size = config["feature_extractor"]["output_features"]
+    features_extractor_class, features_extractor_kwargs = feature_extractor_initializer(config["feature_extractor"])
+    features_extractor_kwargs.update({"input_features": RandomPolygonEnv.get_feature_size()})
+
+    use_critic = config["policy"].get("use_critic", True)
+    ortho_init = config["policy"]["ortho_init"]
+    
     policy_kwargs = dict(
-        features_extractor_class=FeatureExtractor,
-        features_extractor_kwargs=dict(
-            input_features=RandomPolygonEnv.get_feature_size(),
-            output_features=feature_extractor_size,
-            number_of_layers=feature_extractor_layers
-        ),
-        ortho_init=config["feature_extractor"]["ortho_init"]
+        features_extractor_class=features_extractor_class,
+        features_extractor_kwargs=features_extractor_kwargs,
+        use_critic=use_critic,
+        ortho_init=ortho_init
     )
 
     ppo_config = config["PPO"]
     ppo_config["policy_kwargs"] = policy_kwargs
     ppo_config["verbose"] = 1
-    ppo_config["tensorboard_log"] = output_dir    
+    ppo_config["tensorboard_log"] = output_dir
 
     model = PPO(
         CustomActorCriticPolicy,
         env,
         **ppo_config,
     )
-    
+
     if num_envs > 1:
         eval_env = make_vec_env(
-            initialize_eval_environment, 
+            initialize_eval_environment,
             num_envs,
             vec_env_cls=SubprocVecEnv,
         )
@@ -101,7 +104,7 @@ if __name__ == "__main__":
     eval_config = config["evaluator"]
     num_evaluations = eval_config["num_evaluations"]
     total_timesteps = config["total_timesteps"]
-    eval_freq = int(total_timesteps/(num_evaluations*num_envs))
+    eval_freq = int(total_timesteps / (num_evaluations * num_envs))
     print("EVAL FREQUENCY : ", eval_freq)
 
     eval_callback = EvalCallback(
@@ -112,7 +115,7 @@ if __name__ == "__main__":
         deterministic=False,
         render=False
     )
-    
+
     model.learn(total_timesteps=total_timesteps, callback=eval_callback)
 
     print("TRAIN STOP TIMESTAMP : ", datetime.datetime.now())

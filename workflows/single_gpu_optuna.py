@@ -14,7 +14,7 @@ import datetime
 
 sys.path.append(os.getcwd())
 from envs.random_polygon_tiler_env import RandomPolygonEnv
-from src.feature_extractor import FeatureExtractor
+from src.convolution_feature_extractor import ConvolutionFeatureExtractor as FeatureExtractor
 from src.policy import CustomActorCriticPolicy
 from src.utils import load_yaml_config
 
@@ -38,7 +38,6 @@ def sample_ppo_params(trial: optuna.Trial):
     n_steps = 512
     batch_size = 256
 
-    # gamma = 1.0 - trial.suggest_float("gamma", 0.0001, 0.1, log=True)
     gae_lambda = 1.0 - trial.suggest_float("gae_lambda", 0.001, 0.2, log=True)
     ent_coef = trial.suggest_float("ent_coef", 0.00000001, 0.5, log=True)
     vf_coef = trial.suggest_float("vf_coef", 0.00000001, 0.5, log=True)
@@ -47,17 +46,9 @@ def sample_ppo_params(trial: optuna.Trial):
     max_grad_norm = trial.suggest_float("max_grad_norm", 0.3, 5.0, log=True)
     learning_rate = trial.suggest_float("lr", 1e-5, 0.1, log=True)
 
-    # n_steps = 2 ** trial.suggest_int("exponent_n_steps", 10, 15)
-    # batch_size = 2 ** trial.suggest_int("batch_size", 5, 9)
-
     ortho_init = trial.suggest_categorical("ortho_init", [False, True])
     feature_extractor_layers = trial.suggest_int("feature_extractor_layers", 2, 10)
     feature_extractor_size = 2 ** trial.suggest_int("feature_extractor_size", 6, 10)
-
-    # Display true values.
-    # trial.set_user_attr("gamma_", gamma)
-    # trial.set_user_attr("n_steps", n_steps)
-    # trial.set_user_attr("batch_size_", batch_size)
 
     policy_kwargs = dict(
         features_extractor_class=FeatureExtractor,
@@ -220,7 +211,6 @@ if __name__ == "__main__":
     storage = JournalStorage(JournalFileStorage(storage_path))
     print("\nUsing storage : ", storage_path)
 
-
     study = optuna.create_study(
         sampler=sampler,
         pruner=pruner,
@@ -254,5 +244,4 @@ if __name__ == "__main__":
     for key, value in trial.user_attrs.items():
         print("    {}: {}".format(key, value))
 
-    
     print("EXPERIMENT END TIMESTAMP : ", datetime.datetime.now(), "\n\n")
