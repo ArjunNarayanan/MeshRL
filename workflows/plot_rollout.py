@@ -7,7 +7,7 @@ import argparse
 import math
 
 sys.path.append(os.getcwd())
-from envs.random_polygon_env import RandomPolygonEnv
+from envs.random_polygon_tiler_env import RandomPolygonEnv
 from src.render import Renderer
 from src.utils import load_yaml_config
 

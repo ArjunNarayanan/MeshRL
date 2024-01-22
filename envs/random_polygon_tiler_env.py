@@ -21,7 +21,8 @@ class RandomPolygonEnv(gym.Env):
             face_reward_weight=0.5,
             vertex_reward_weight=0.5,
             incremental_reward=False,
-            scale_reward=False
+            scale_reward=False,
+            use_progress=True
     ):
         super().__init__()
         self.polygon_degree_range = polygon_degree_range
@@ -82,6 +83,7 @@ class RandomPolygonEnv(gym.Env):
         self.template_boundary_index = -2
         self.geometric_boundary_index = -1
         self.num_features = self.get_feature_size()
+        self.use_progress = use_progress
 
         self.action_space = Discrete(self.num_actions_per_half_edge)
         self.clamp_features_max = 5
@@ -290,7 +292,10 @@ class RandomPolygonEnv(gym.Env):
         return action_mask
 
     def _get_progress(self):
-        return np.array([self.num_steps / self.max_steps], dtype=np.float32)
+        if self.use_progress:
+            return np.array([self.num_steps / self.max_steps], dtype=np.float32)
+        else:
+            return np.array([0.0], dtype=np.float32)
 
     def _get_blank_obs(self):
         features = np.zeros((self.template_size, self.num_features), dtype=np.float32)

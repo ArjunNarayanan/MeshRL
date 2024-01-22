@@ -18,7 +18,7 @@ class CustomNetwork(torch.nn.Module):
         )
         # value network
         self.value_net = torch.nn.Sequential(
-            torch.nn.Linear(input_features+1, output_features), # add +1 to accommodate progress info
+            torch.nn.Linear(input_features + 1, output_features),  # add +1 to accommodate progress info
             torch.nn.LeakyReLU()
         )
 
@@ -50,6 +50,12 @@ class CustomActorCriticPolicy(ActorCriticPolicy):
     ):
         self.input_features = kwargs["features_extractor_kwargs"]["output_features"]
         self.output_features = kwargs.get("output_features", self.input_features)
+        self.use_critic = kwargs.get("use_critic", True)
+
+        # remove keys that are not needed for super class
+        kwargs.pop("output_features", None)
+        kwargs.pop("use_critic", None)
+
         super().__init__(
             observation_space,
             action_space,
@@ -82,7 +88,6 @@ class CustomActorCriticPolicy(ActorCriticPolicy):
     def predict_values(self, obs):
         features = self.features_extractor(obs)
         latent_vf = self.mlp_extractor.forward_critic(features, obs)
-        # latent_vf = self._reduce_latent_vf(latent_vf)
         values = self.value_net(latent_vf)
         return values
 
@@ -102,7 +107,6 @@ class CustomActorCriticPolicy(ActorCriticPolicy):
         distribution = self._get_masked_action_dist_from_latent(latent_pi, mask)
         log_prob = distribution.log_prob(actions)
 
-        # latent_vf = self._reduce_latent_vf(latent_vf)
         values = self.value_net(latent_vf)
         entropy = distribution.entropy()
         return values, log_prob, entropy
@@ -112,8 +116,9 @@ class CustomActorCriticPolicy(ActorCriticPolicy):
 
         latent_pi, latent_vf = self.mlp_extractor(features, obs)
 
-        # latent_vf = self._reduce_latent_vf(latent_vf)
         values = self.value_net(latent_vf)
+        if not self.use_critic:
+            values = torch.zeros_like(values)
 
         mask = obs["mask"]
         distribution = self._get_masked_action_dist_from_latent(latent_pi, mask)
