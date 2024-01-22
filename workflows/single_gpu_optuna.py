@@ -10,6 +10,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 import torch
 import os
 import sys
+import datetime
 
 sys.path.append(os.getcwd())
 from envs.random_polygon_tiler_env import RandomPolygonEnv
@@ -195,6 +196,8 @@ if __name__ == "__main__":
     N_EVAL_EPISODES = 100
     N_TIMESTEPS = int(config["total_timesteps"])
 
+    print("EXPERIMENT START TIMESTAMP : ", datetime.datetime.now(), "\n\n")
+
     print("\nTotal timesteps : ", N_TIMESTEPS, "\n")
     EVAL_FREQ = int(N_TIMESTEPS / N_EVALUATIONS)
     print("\nEval Freq : ", EVAL_FREQ, "\n")
@@ -250,3 +253,6 @@ if __name__ == "__main__":
     print("  User attrs:")
     for key, value in trial.user_attrs.items():
         print("    {}: {}".format(key, value))
+
+    
+    print("EXPERIMENT END TIMESTAMP : ", datetime.datetime.now(), "\n\n")

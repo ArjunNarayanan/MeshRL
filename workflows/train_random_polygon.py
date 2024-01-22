@@ -5,6 +5,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv
 import sys
 import os
+import datetime
 
 sys.path.append(os.getcwd())
 from envs.random_polygon_tiler_env import RandomPolygonEnv
@@ -28,6 +29,12 @@ def initialize_environment():
     env = RandomPolygonEnv.from_config(env_config)
     return env
 
+def initialize_eval_environment():
+    env_config = config["environment"]
+    env_config["incremental_reward"] = False
+    env = RandomPolygonEnv.from_config(env_config)
+    return env
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train PPO agent")
@@ -37,6 +44,8 @@ if __name__ == "__main__":
 
     config = load_yaml_config(args.config)
     max_edge_addition_steps = config["environment"].get("max_edge_addition_steps", 3)
+
+    print("TRAIN START TIMESTAMP : ", datetime.datetime.now())
 
     num_envs = args.num_envs
     if num_envs > 1:
@@ -79,13 +88,20 @@ if __name__ == "__main__":
         env,
         **ppo_config,
     )
-
-    eval_env = make_vec_env(initialize_environment, 1)
+    
+    if num_envs > 1:
+        eval_env = make_vec_env(
+            initialize_eval_environment, 
+            num_envs,
+            vec_env_cls=SubprocVecEnv,
+        )
+    else:
+        eval_env = initialize_eval_environment()
 
     eval_config = config["evaluator"]
     num_evaluations = eval_config["num_evaluations"]
     total_timesteps = config["total_timesteps"]
-    eval_freq = int(total_timesteps/num_evaluations)
+    eval_freq = int(total_timesteps/(num_evaluations*num_envs))
     print("EVAL FREQUENCY : ", eval_freq)
 
     eval_callback = EvalCallback(
@@ -98,3 +114,5 @@ if __name__ == "__main__":
     )
     
     model.learn(total_timesteps=total_timesteps, callback=eval_callback)
+
+    print("TRAIN STOP TIMESTAMP : ", datetime.datetime.now())
