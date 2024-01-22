@@ -1,7 +1,7 @@
 import torch
 import unittest
 from envs.hex_env import HexEnv
-from src.feature_extractor import FeatureExtractor
+from src.convolution_feature_extractor import ConvolutionFeatureExtractor
 
 
 def get_model_input_from_observation(obs):
@@ -26,7 +26,7 @@ class TestFeatureExtractor(unittest.TestCase):
         self.env = HexEnv()
         self.output_features = 16
         self.batch_size = 5
-        self.model = FeatureExtractor(
+        self.model = ConvolutionFeatureExtractor(
             self.env.observation_space,
             4,
             self.output_features,
