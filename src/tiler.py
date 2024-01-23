@@ -390,6 +390,13 @@ class Tiler(nx.MultiGraph):
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
         return self.has_node(hidx) and self.nodes[hidx].get("type") == "half_edge"
 
+    def is_boundary_half_edge(self, hidx):
+        if hidx is None:
+            return False
+
+        hidx = self._ensure_tag_form(hidx, self.boundary_tag)
+        return self.has_node(hidx) and self.nodes[hidx].get("type") == "boundary"
+
     def create_face(self):
         new_face_idx = (self.next_face_index, self.face_tag)
         self.add_node(new_face_idx, type="face")
@@ -794,6 +801,41 @@ class Tiler(nx.MultiGraph):
             append_if_not_seen(prev_edge)
 
             if not self.half_edge_on_boundary(edge):
+                twin_edge = self.twin_half_edge(edge)
+                append_if_not_seen(twin_edge)
+
+        return neighbors
+
+    def knn_half_edges_with_boundary(self, hidx, k):
+        hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
+        assert self.is_half_edge(hidx)
+        assert k >= 1
+
+        seen = set()
+        queue = deque()
+
+        seen.add(hidx)
+        queue.append(hidx)
+        neighbors = []
+
+        def append_if_not_seen(edge):
+            if edge not in seen:
+                seen.add(edge)
+                queue.append(edge)
+
+        while queue:
+            edge = queue.popleft()
+            neighbors.append(edge)
+            if len(neighbors) >= k:
+                return neighbors
+
+            if self.is_half_edge(edge):
+                next_edge = self.next_half_edge(edge)
+                append_if_not_seen(next_edge)
+
+                prev_edge = self.previous_half_edge(edge)
+                append_if_not_seen(prev_edge)
+
                 twin_edge = self.twin_half_edge(edge)
                 append_if_not_seen(twin_edge)
 

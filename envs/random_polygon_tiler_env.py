@@ -22,7 +22,8 @@ class RandomPolygonEnv(gym.Env):
             vertex_reward_weight=0.5,
             incremental_reward=False,
             scale_reward=False,
-            use_progress=True
+            use_progress=True,
+            use_boundary=False
     ):
         super().__init__()
         self.polygon_degree_range = polygon_degree_range
@@ -77,6 +78,7 @@ class RandomPolygonEnv(gym.Env):
             os.makedirs(logdir)
         self.logdir = logdir
 
+        self.use_boundary = use_boundary
         self.template_center = self._select_half_edge_template_center(self.graph.half_edge_list())
         self._build_template()
 
@@ -173,10 +175,14 @@ class RandomPolygonEnv(gym.Env):
         return half_edges[template_center_idx]
 
     def _build_template(self):
-        self.index_to_half_edge = self.graph.knn_half_edges(self.template_center, self.template_size)
+        if self.use_boundary:
+            self.index_to_half_edge = self.graph.knn_half_edges_with_boundary(self.template_center, self.template_size)
+        else:
+            self.index_to_half_edge = self.graph.knn_half_edges(self.template_center, self.template_size)
+
         self.half_edge_to_index = {half_edge: idx for idx, half_edge in enumerate(self.index_to_half_edge)}
 
-    def _get_feature_matrix(self):
+    def _get_feature_matrix_archive(self):
         matrix = np.zeros((self.template_size, self.num_features), dtype=np.float32)
         for order, hidx in enumerate(self.index_to_half_edge):
             vidx = self.graph.source_vertex(hidx, tag=False)
@@ -197,37 +203,37 @@ class RandomPolygonEnv(gym.Env):
 
         return matrix
 
+    def _get_feature_matrix(self):
+        matrix = np.zeros((self.template_size, self.num_features), dtype=np.float32)
+        for order, hidx in enumerate(self.index_to_half_edge):
+            is_half_edge = self.graph.is_half_edge(hidx)
+
+            vidx = self.graph.source_vertex(hidx, tag=False)
+            vertex_degree = self.graph.vertex_degree(vidx)
+            vertex_desired_degree = self.vertex_desired_degree[vidx]
+            is_user_defined_vertex = 1.0 if self.graph.is_user_defined_vertex(vidx) else 0.0
+
+            fidx = self.graph.face(hidx)
+            face_degree = self.graph.face_degree(fidx) if is_half_edge else 0
+            face_desired_degree = self.face_desired_degree if is_half_edge else 0
+
+            matrix[order, :] = [
+                min(vertex_degree / vertex_desired_degree, self.clamp_features_max),
+                vertex_desired_degree,
+                min(face_degree / self.face_desired_degree, self.clamp_features_max),
+                face_desired_degree,
+                is_user_defined_vertex
+            ]
+
+        return matrix
+
     def _get_user_defined_vertex_flag(self, vidx):
         if self.graph.is_user_defined_vertex(vidx):
             return 1.0
         else:
             return 0.0
 
-    def _get_feature_matrix_archive(self):
-        matrix = np.zeros((self.template_size, self.num_features), dtype=np.float32)
-
-        num_template_halfedges = len(self.index_to_half_edge)
-
-        source_vertices = [self.graph.source_vertex(hidx, tag=False) for hidx in self.index_to_half_edge]
-        vertex_degrees = np.array(self.graph.vertex_degree_of_list(source_vertices))
-        vertex_desired_degrees = np.array([self.vertex_desired_degree[vidx] for vidx in source_vertices])
-        user_defined_flags = np.array([self._get_user_defined_vertex_flag(vidx) for vidx in source_vertices])
-
-        face_indices = [self.graph.face(hidx) for hidx in self.index_to_half_edge]
-        face_degrees = np.array(self.graph.face_degree_of_list(face_indices))
-
-        vertex_features = (vertex_degrees / vertex_desired_degrees).clip(0, self.clamp_features_max)
-        face_features = (face_degrees / self.face_desired_degree).clip(0, self.clamp_features_max)
-
-        matrix[:num_template_halfedges, 0] = vertex_features
-        matrix[:num_template_halfedges, 1] = vertex_desired_degrees
-        matrix[:num_template_halfedges, 2] = face_features
-        matrix[:num_template_halfedges, 3] = self.face_desired_degree
-        matrix[:num_template_halfedges, 4] = user_defined_flags
-
-        return matrix
-
-    def _get_next_edges(self):
+    def _get_next_edges_archive(self):
         next_edges = np.arange(self.template_size)
         for (idx, hidx) in enumerate(self.index_to_half_edge):
             next_hidx = self.graph.next_half_edge(hidx)
@@ -235,7 +241,19 @@ class RandomPolygonEnv(gym.Env):
             next_edges[idx] = next_idx
         return next_edges
 
-    def _get_previous_edges(self):
+    def _get_next_edges(self):
+        next_edges = np.arange(self.template_size)
+        for (idx, hidx) in enumerate(self.index_to_half_edge):
+            if self.graph.is_half_edge(hidx):
+                next_hidx = self.graph.next_half_edge(hidx)
+                next_idx = self.half_edge_to_index.get(next_hidx, self.template_boundary_index)
+                next_edges[idx] = next_idx
+            else:
+                next_edges[idx] = self.geometric_boundary_index
+
+        return next_edges
+
+    def _get_previous_edges_archive(self):
         prev_edges = np.arange(self.template_size)
         for (idx, hidx) in enumerate(self.index_to_half_edge):
             prev_hidx = self.graph.previous_half_edge(hidx)
@@ -243,7 +261,19 @@ class RandomPolygonEnv(gym.Env):
             prev_edges[idx] = prev_idx
         return prev_edges
 
-    def _get_twin_edges(self):
+    def _get_previous_edges(self):
+        prev_edges = np.arange(self.template_size)
+        for (idx, hidx) in enumerate(self.index_to_half_edge):
+            if self.graph.is_half_edge(hidx):
+                prev_hidx = self.graph.previous_half_edge(hidx)
+                prev_idx = self.half_edge_to_index.get(prev_hidx, self.template_boundary_index)
+                prev_edges[idx] = prev_idx
+            else:
+                prev_edges[idx] = self.geometric_boundary_index
+
+        return prev_edges
+
+    def _get_twin_edges_archive(self):
         twin_edges = np.arange(self.template_size)
         for idx, hidx in enumerate(self.index_to_half_edge):
             if self.graph.half_edge_on_boundary(hidx):
@@ -252,6 +282,21 @@ class RandomPolygonEnv(gym.Env):
                 twin_hidx = self.graph.twin_half_edge(hidx)
                 twin_idx = self.half_edge_to_index.get(twin_hidx, self.template_boundary_index)
                 twin_edges[idx] = twin_idx
+        return twin_edges
+
+    def _get_twin_edges(self):
+        twin_edges = np.arange(self.template_size)
+        for idx, hidx in enumerate(self.index_to_half_edge):
+            if self.graph.is_half_edge(hidx):
+                if self.graph.half_edge_on_boundary(hidx):
+                    twin_edges[idx] = self.geometric_boundary_index
+                else:
+                    twin_hidx = self.graph.twin_half_edge(hidx)
+                    twin_idx = self.half_edge_to_index.get(twin_hidx, self.template_boundary_index)
+                    twin_edges[idx] = twin_idx
+            else:
+                twin_edges[idx] = self.geometric_boundary_index
+
         return twin_edges
 
     def _linear_action_index_to_half_edge_and_action(self, linear_action_index):
