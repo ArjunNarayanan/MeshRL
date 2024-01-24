@@ -108,6 +108,9 @@ class CustomActorCriticPolicy(ActorCriticPolicy):
         log_prob = distribution.log_prob(actions)
 
         values = self.value_net(latent_vf)
+        if not self.use_critic:
+            values = torch.zeros_like(values)
+
         entropy = distribution.entropy()
         return values, log_prob, entropy
 

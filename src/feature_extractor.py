@@ -2,24 +2,21 @@ from src.transformer_feature_extractor import TransformerFeatureExtractor
 from src.convolution_feature_extractor import ConvolutionFeatureExtractor
 
 
-def _initialize_transformer_feature_extractor(feature_extractor_config):
-    feature_extractor_class = TransformerFeatureExtractor
-    return feature_extractor_class, feature_extractor_config
+def feature_extractor_initializer(config):
+    feature_extractor_config = config["feature_extractor"]
+    features_extractor_kwargs = feature_extractor_config.copy()
 
-
-def _initialize_convolution_feature_extractor(feature_extractor_config):
-    feature_extractor_class = ConvolutionFeatureExtractor
-    feature_extractor_kwargs = feature_extractor_config["feature_extractor"].copy()
-    feature_extractor_kwargs.pop("name", None)
-    return feature_extractor_class, feature_extractor_config
-
-
-def feature_extractor_initializer(feature_extractor_config):
-    config = feature_extractor_config.copy()
-    feature_extractor_type = config.pop("type")
+    feature_extractor_type = features_extractor_kwargs.pop("type")
     if feature_extractor_type == "Transformer":
-        return TransformerFeatureExtractor, config
+        sequence_length = config["environment"]["template_size"]
+        if "sequence_length" in features_extractor_kwargs:
+            assert features_extractor_kwargs["sequence_length"] == sequence_length
+        else:
+            features_extractor_kwargs["sequence_length"] = sequence_length
+        return TransformerFeatureExtractor, features_extractor_kwargs
+
     elif feature_extractor_type == "Convolution":
-        return ConvolutionFeatureExtractor, config
+        return ConvolutionFeatureExtractor, features_extractor_kwargs
+    
     else:
         raise TypeError("Unexpected feature extractor type : ", feature_extractor_type)
