@@ -14,11 +14,6 @@ from src.policy import CustomActorCriticPolicy
 from src.utils import load_yaml_config
 
 
-def extract_env(wrapped_env):
-    env = wrapped_env.envs[0].env
-    return env
-
-
 def make_output_dir_if_necessary(output_dir):
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)

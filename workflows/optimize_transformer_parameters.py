@@ -14,7 +14,7 @@ import datetime
 
 sys.path.append(os.getcwd())
 from envs.random_polygon_tiler_env import RandomPolygonEnv
-from src.feature_extractor import feature_extractor_initializer
+from src.transformer_feature_extractor import TransformerFeatureExtractor as FeatureExtractor
 from src.policy import CustomActorCriticPolicy
 from src.utils import load_yaml_config
 
@@ -38,25 +38,35 @@ def sample_ppo_params(trial: optuna.Trial):
     n_steps = 1024
     batch_size = 256
 
-    gae_lambda = 1.0 - trial.suggest_float("gae_lambda", 1e-3, 0.2, log=True)
-    ent_coef = trial.suggest_float("ent_coef", 1e-8, 0.5, log=True)
-    vf_coef = trial.suggest_float("vf_coef", 1e-8, 0.5, log=True)
-    clip_range = trial.suggest_float("clip_range", 1e-2, 0.20)
+    gae_lambda = 1.0 - trial.suggest_float("gae_lambda", 0.001, 0.2, log=True)
+    ent_coef = trial.suggest_float("ent_coef", 0.00000001, 0.5, log=True)
+    vf_coef = trial.suggest_float("vf_coef", 0.00000001, 0.5, log=True)
+    clip_range = trial.suggest_float("clip_range", 0.01, 0.20)
 
     max_grad_norm = trial.suggest_float("max_grad_norm", 0.1, 5.0, log=True)
     learning_rate = trial.suggest_float("lr", 1e-6, 0.001, log=True)
-
     ortho_init = trial.suggest_categorical("ortho_init", [False, True])
+
     feature_extractor_layers = trial.suggest_int("feature_extractor_layers", 2, 10)
-    feature_extractor_size = 2 ** trial.suggest_int("feature_extractor_size", 6, 10)
+    num_features_per_head = 2 ** trial.suggest_int("feature_extractor_size", 4, 7)
+    num_heads = 2 * trial.suggest_int("num_heads", 2, 6)
+    feature_extractor_size = num_features_per_head*num_heads
+    dropout = trial.suggest_float("dropout", 1e-3, 0.4, log=True)
+
+    sequence_length = config["environment"]["template_size"]
+
+    feature_extractor_kwargs = dict(
+        input_features=RandomPolygonEnv.get_feature_size(),
+        output_features=feature_extractor_size,
+        sequence_length=sequence_length,
+        num_heads=num_heads,
+        number_of_layers=feature_extractor_layers,
+        dropout=dropout
+    )
 
     policy_kwargs = dict(
         features_extractor_class=FeatureExtractor,
-        features_extractor_kwargs=dict(
-            input_features=RandomPolygonEnv.get_feature_size(),
-            output_features=feature_extractor_size,
-            number_of_layers=feature_extractor_layers
-        ),
+        features_extractor_kwargs=feature_extractor_kwargs,
         ortho_init=ortho_init,
     )
 

@@ -115,6 +115,7 @@ class RandomPolygonEnv(gym.Env):
         vertex_reward_weight = config.get("vertex_reward_weight", 0.5)
         incremental_reward = config.get("incremental_reward", False)
         scale_reward = config["scale_reward"]
+        use_boundary = config.get("use_boundary", False)
 
         return cls(
             face_desired_degree,
@@ -126,7 +127,8 @@ class RandomPolygonEnv(gym.Env):
             face_reward_weight=face_reward_weight,
             vertex_reward_weight=vertex_reward_weight,
             incremental_reward=incremental_reward,
-            scale_reward=scale_reward
+            scale_reward=scale_reward,
+            use_boundary=use_boundary
         )
 
     def _face_score(self, fidx):
