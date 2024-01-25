@@ -14,21 +14,20 @@ import datetime
 
 sys.path.append(os.getcwd())
 from envs.random_polygon_tiler_env import RandomPolygonEnv
-from src.feature_extractor import feature_extractor_initializer
+from src.convolution_feature_extractor import ConvolutionFeatureExtractor as FeatureExtractor
 from src.policy import CustomActorCriticPolicy
 from src.utils import load_yaml_config
 
 
 def initialize_environment():
-    env_config = config["environment"]
     env = RandomPolygonEnv.from_config(env_config)
     return env
 
 
 def initialize_eval_environment():
-    env_config = config["environment"]
-    env_config["incremental_reward"] = False
-    env = RandomPolygonEnv.from_config(env_config)
+    eval_config = env_config.copy()
+    eval_config["incremental_reward"] = False
+    env = RandomPolygonEnv.from_config(eval_config)
     return env
 
 
@@ -107,7 +106,8 @@ class TrialEvalCallback(EvalCallback):
             # Prune trial if needed.
             if self.trial.should_prune():
                 self.is_pruned = True
-                return False
+                raise optuna.TrialPruned()
+            
         return True
 
 
@@ -181,9 +181,13 @@ if __name__ == "__main__":
     gpu_id = args.gpu
     config = load_yaml_config(config_filename)
 
+    output_folder = os.path.dirname(config_filename)
+    env_config = config["environment"]
+    env_config["logdir"] = output_folder
+
     N_TRIALS = int(config["num_trials"])
     N_STARTUP_TRIALS = 5
-    N_EVALUATIONS = 500
+    N_EVALUATIONS = 100
     N_EVAL_EPISODES = 100
     N_TIMESTEPS = int(config["total_timesteps"])
 
@@ -204,7 +208,6 @@ if __name__ == "__main__":
 
     study_name = config["study_name"]
 
-    output_folder = os.path.dirname(config_filename)
     journal_file_name = study_name + ".log"
     storage_path = os.path.join(output_folder, journal_file_name)
 
