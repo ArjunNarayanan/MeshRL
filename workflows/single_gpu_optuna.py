@@ -36,14 +36,14 @@ def sample_ppo_params(trial: optuna.Trial):
     """Sampler for PPO hyperparameters."""
     gamma = 1.0
     n_steps = 1024
-    batch_size = 256
+    batch_size = 512
 
     gae_lambda = 1.0 - trial.suggest_float("gae_lambda", 1e-3, 0.2, log=True)
     ent_coef = trial.suggest_float("ent_coef", 1e-8, 0.5, log=True)
     vf_coef = trial.suggest_float("vf_coef", 1e-8, 0.5, log=True)
     clip_range = trial.suggest_float("clip_range", 1e-2, 0.20)
 
-    max_grad_norm = trial.suggest_float("max_grad_norm", 0.1, 5.0, log=True)
+    max_grad_norm = trial.suggest_float("max_grad_norm", 0.1, 5.0)
     learning_rate = trial.suggest_float("lr", 1e-6, 0.001, log=True)
 
     ortho_init = trial.suggest_categorical("ortho_init", [False, True])
