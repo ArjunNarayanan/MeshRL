@@ -9,7 +9,9 @@ class TestInsertHalfedge(unittest.TestCase):
             3,
             [6],
             template_size=6,
-            use_boundary=True
+            use_boundary=True,
+            face_reward_weight=1,
+            vertex_reward_weight=1
         )
         for vidx, _ in self.env.vertex_desired_degree.items():
             self.env.vertex_desired_degree[vidx] = 3

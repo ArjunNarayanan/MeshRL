@@ -351,6 +351,13 @@ class Tiler(nx.MultiGraph):
         tidx = self.twin_half_edge(hidx)
         return self.half_edges[tidx].face is None
 
+    def _vertex_to_halfedge(self, vidx):
+        vidx = self._ensure_tag_form(vidx, self.vertex_tag)
+        return (hidx for vidx, hidx in self.edges(vidx) if self.is_half_edge(hidx))
+
+    def vertex_on_boundary(self, vidx):
+        return any(self.half_edge_on_boundary(hidx) for hidx in self._vertex_to_halfedge(vidx))
+
     def face_half_edges(self, face_idx, tag=True):
         """return all half_edges connected to a face"""
         face_idx = self._ensure_tag_form(face_idx, self.face_tag)
@@ -840,3 +847,34 @@ class Tiler(nx.MultiGraph):
                 append_if_not_seen(twin_edge)
 
         return neighbors
+
+    def _accumulate_neighbor_coordinates(self):
+        accumulated_coords = {k: 2 * [0] for k in self.vertex_coordinates.keys()}
+        for hidx in self.halfedge_list():
+            src_vidx = self.source_vertex(hidx, tag=False)
+            src_coords = self.vertex_coordinates[src_vidx]
+            dst_vidx = self.target_vertex(hidx, tag=False)
+            dst_coords = accumulated_coords[dst_vidx]
+
+            dst_coords[0] += src_coords[0]
+            dst_coords[1] += src_coords[1]
+
+        return accumulated_coords
+
+    def laplace_smooth_vertices(self):
+        accumulated_coords = self._accumulate_neighbor_coordinates()
+
+        # average the coordinates
+        for vidx, coords in accumulated_coords.items():
+            degree = self.vertex_degree(vidx)
+
+            coords[0] /= degree
+            coords[1] /= degree
+
+        # set boundary coordinates to their original values
+        for vidx in accumulated_coords.keys():
+            if self.vertex_on_boundary(vidx):
+                accumulated_coords[vidx] = self.vertex_coordinates[vidx]
+
+        self.vertex_coordinates = accumulated_coords
+        return

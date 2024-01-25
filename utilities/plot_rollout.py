@@ -1,61 +1,30 @@
 import torch
-from stable_baselines3 import PPO
-import matplotlib.pyplot as plt
 import os
 import sys
 import argparse
 import math
+import glob
 
 sys.path.append(os.getcwd())
 from envs.random_polygon_tiler_env import RandomPolygonEnv
 from src.render import Renderer
-from src.utils import load_yaml_config
+from src.utils import load_yaml_config, load_model_from_checkpoint
 
 
-def plot_distribution(probs):
-    fig, ax = plt.subplots()
-    xtick_locs = range(len(probs))
-
-    ax.bar(xtick_locs, probs)
-    # ax.set_xticks(xtick_locs)
-    ax.set_xlabel("Actions")
-    ax.set_ylabel("Probabilities")
-    ax.grid()
-    return fig
-
-
-def initialize_environment():
-    env_config = config["environment"]
-    env = RandomPolygonEnv.from_config(env_config)
-    return env
-
-
-def get_action_distribution(obs, plot=False):
-    # template_halfedges = env.index_to_halfedge
-    # print("Template : ", template_halfedges)
+def get_action_distribution(obs):
     with torch.no_grad():
         dist = model.policy.get_distribution(obs)
-    probs = dist.distribution.probs[0]
-    if plot:
-        plot_distribution(probs)
+
     return dist
 
 
 def step_environment(env, dist):
     action = dist.get_actions()
     action = action.cpu().numpy()
-    linear_action = action[0]
-    action_probability = dist.distribution.probs[0, linear_action].item()
-
-    action_halfedge, action_type = env._linear_action_index_to_halfedge_and_action(action[0])
 
     print("Step : ", env.num_steps)
-    # print("Selected action : ", action[0])
-    # print("Selected action probability : ", action_probability)
-    # print("\tHalfedge: ", action_halfedge, " \tType: ", action_type)
     obs, reward, done, truncated, info = env.step(action[0])
     print("Reward : ", reward)
-    # print("Terminated : ", done)
 
     return obs, done
 
@@ -73,19 +42,6 @@ def make_output_folder(dir):
         os.makedirs(dir)
 
 
-def reset_if_done(env, obs, done):
-    if done:
-        total_reward = abs(env.initial_score - env.score)/env.initial_score
-        print("\nNORMALIZED RETURN : ", total_reward, "\n")
-        env.reset()
-        # renderer.graph = env.graph
-        # renderer.coords = env.graph.vertex_coordinates
-        obs = obs_as_tensor(env._get_obs())
-        return obs
-    else:
-        return obs_as_tensor(obs)
-
-
 def plot_env(env, filename=None):
     renderer = Renderer(env.graph, env.graph.vertex_coordinates)
     renderer.coords = env.graph.vertex_coordinates
@@ -97,8 +53,7 @@ def plot_env(env, filename=None):
 
 
 def plot_rollout(rollout):
-    env = initialize_environment()
-    fig_output_folder = os.path.join(input_folder, "figures", "rollout-" + str(rollout))
+    fig_output_folder = os.path.join(output_folder, "rollout-" + str(rollout))
     make_output_folder(fig_output_folder)
 
     step = 0
@@ -109,6 +64,7 @@ def plot_rollout(rollout):
     done = env.is_terminated()
 
     while not done:
+        step += 1
         dist = get_action_distribution(obs)
         obs, done = step_environment(env, dist)
         obs = obs_as_tensor(obs)
@@ -119,33 +75,53 @@ def plot_rollout(rollout):
 
         plot_env(env, filename=output_file)
         print("Saving figure : ", output_file)
-        step += 1
 
     total_reward = abs(env.initial_score - env.score) / env.initial_score
     print("\nNORMALIZED RETURN : ", total_reward, "\n")
 
 
-if __name__=="__main__":
+def get_next_rollout_index():
+    rollout_dirs = glob.glob(os.path.join(output_folder, "rollout-*"))
+    rollout_names = [os.path.basename(f) for f in rollout_dirs]
+    rollout_indices = [int(name.split("-")[1]) for name in rollout_names]
+    if rollout_indices:
+        return max(rollout_indices) + 1
+    else:
+        return 1
+
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-input", required=True)
-    parser.add_argument("-rollout", required=True)
+    parser.add_argument("-rollout", default=None)
     parser.add_argument("-degree", default=None, type=int)
 
     args = parser.parse_args()
     input_folder = args.input
-    rollout = args.rollout
-    checkpoint = os.path.join(input_folder, "best_model.zip")
-    model = PPO.load(checkpoint)
-
     polygon_degree = args.degree
+
+    output_folder = os.path.join(input_folder, "figures")
+    if not os.path.isdir(output_folder):
+        os.makedirs(output_folder)
+
+    if not args.rollout:
+        rollout_index = get_next_rollout_index()
+    else:
+        rollout_index = args.rollout
+
     config_fn = os.path.join(input_folder, "config.yml")
     config = load_yaml_config(config_fn)
-    if polygon_degree is not None:
-        config["environment"]["min_polygon_degree"] = polygon_degree
-        config["environment"]["max_polygon_degree"] = polygon_degree
+
+    checkpoint = os.path.join(input_folder, "best_model.zip")
+    model = load_model_from_checkpoint(checkpoint, config_fn)
 
     env_config = config["environment"]
-    max_steps = env_config["max_steps_factor"] * env_config["max_polygon_degree"]
+    if polygon_degree is not None:
+        env_config["min_polygon_degree"] = polygon_degree
+        env_config["max_polygon_degree"] = polygon_degree
+
+    env = RandomPolygonEnv.from_config(env_config)
+    max_steps = env.max_steps
     NUM_DIGITS = int(math.log10(max_steps))
 
-    plot_rollout(rollout)
+    plot_rollout(rollout_index)

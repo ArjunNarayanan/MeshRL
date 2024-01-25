@@ -23,7 +23,9 @@ class RandomPolygonEnv(gym.Env):
             incremental_reward=False,
             scale_reward=False,
             use_progress=True,
-            use_boundary=False
+            use_boundary=False,
+            eval_mode=False,
+            fixed_reset=False
     ):
         super().__init__()
         self.polygon_degree_range = polygon_degree_range
@@ -59,17 +61,22 @@ class RandomPolygonEnv(gym.Env):
         self.vertex_reward_weight = vertex_reward_weight
         self.face_score = self.global_face_score()
         self.vertex_score = self.global_vertex_score()
-        self.score = self.face_score + self.vertex_score
+        self.score = face_reward_weight * self.face_score + vertex_reward_weight * self.vertex_score
         self.initial_score = self.score
+        self.min_score = self.score
         self.initial_face_score = self.face_score
         self.initial_vertex_score = self.vertex_score
         self.reward = 0
+
+        self.eval_mode = eval_mode
+        self.fixed_reset = fixed_reset
 
         self.exception_occurred = False
         self.terminated = self.is_terminated()
 
         # Attributes for excpetion handling
         self.initial_graph = deepcopy(self.graph)
+        self.initial_vertex_desired_degree = self.vertex_desired_degree.copy()
         self.exception_count = 0
         self.action_sequence = []
         if logdir is None:
@@ -116,6 +123,8 @@ class RandomPolygonEnv(gym.Env):
         incremental_reward = config.get("incremental_reward", False)
         scale_reward = config["scale_reward"]
         use_boundary = config.get("use_boundary", False)
+        eval_mode = config.get("eval_mode", False)
+        fixed_reset = config.get("fixed_reset", False)
 
         return cls(
             face_desired_degree,
@@ -128,7 +137,9 @@ class RandomPolygonEnv(gym.Env):
             vertex_reward_weight=vertex_reward_weight,
             incremental_reward=incremental_reward,
             scale_reward=scale_reward,
-            use_boundary=use_boundary
+            use_boundary=use_boundary,
+            eval_mode=eval_mode,
+            fixed_reset=fixed_reset
         )
 
     def _face_score(self, fidx):
@@ -377,7 +388,8 @@ class RandomPolygonEnv(gym.Env):
     def _update_scores_and_reward(self, face_reward, vertex_reward):
         self.face_score -= face_reward
         self.vertex_score -= vertex_reward
-        self.score = self.face_score + self.vertex_score
+        self.score = self.face_reward_weight * self.face_score + self.vertex_reward_weight * self.vertex_score
+        self.min_score = min(self.min_score, self.score)
 
         if self.scale_reward:
             self.reward = self.face_reward_weight * face_reward / self.initial_face_score + \
@@ -526,7 +538,8 @@ class RandomPolygonEnv(gym.Env):
     def _update_scores_on_reset(self):
         self.face_score = self.global_face_score()
         self.vertex_score = self.global_vertex_score()
-        self.score = self.face_score + self.vertex_score
+        self.score = self.face_reward_weight * self.face_score + self.vertex_reward_weight * self.vertex_score
+        self.min_score = self.score
         self.initial_score = self.score
         self.initial_face_score = self.face_score
         self.initial_vertex_score = self.vertex_score
@@ -570,7 +583,18 @@ class RandomPolygonEnv(gym.Env):
     def _get_incremental_reward(self):
         return self.reward
 
+    def _get_eval_mode_reward(self):
+        if self.terminated:
+            reward = (self.initial_score - self.min_score) / self.initial_score
+            return reward
+        else:
+            return 0
+
     def _get_reward(self):
+        # if environment is in eval_mode, return best normalized reward
+        if self.eval_mode:
+            return self._get_eval_mode_reward()
+
         if self.incremental_reward:
             return self._get_incremental_reward()
         else:
@@ -607,7 +631,11 @@ class RandomPolygonEnv(gym.Env):
         exception_filename = str(uuid.uuid4()) + ".pkl"
         self.exception_count += 1
         exception_filepath = os.path.join(self.logdir, exception_filename)
-        output_data = {"graph": self.initial_graph, "actions": self.action_sequence}
+        output_data = {
+            "graph": self.initial_graph,
+            "actions": self.action_sequence,
+            "vertex_desired_degree": self.initial_vertex_desired_degree
+        }
         with open(exception_filepath, "wb") as output_file:
             pickle.dump(output_data, output_file)
 
@@ -620,6 +648,7 @@ class RandomPolygonEnv(gym.Env):
         self.vertex_desired_degree = desired_degree
 
         self.initial_graph = deepcopy(self.graph)
+        self.initial_vertex_desired_degree = self.vertex_desired_degree.copy()
         self.action_sequence = []
         self.exception_occurred = False
 
@@ -629,20 +658,37 @@ class RandomPolygonEnv(gym.Env):
         self.max_steps = int(self.max_steps_factor * self.polygon_degree)
         self.num_steps = 0
 
-        self.face_score = self.global_face_score()
-        self.vertex_score = self.global_vertex_score()
-        self.score = self.face_score + self.vertex_score
+        self._update_scores_on_reset()
 
-        self.initial_score = self.score
-        self.initial_face_score = self.face_score
-        self.initial_vertex_score = self.vertex_score
+        self.terminated = self.is_terminated()
+
+        obs = self._get_obs()
+        return obs, {"score": self.score}
+
+    def _reset_to_initial_state(self):
+        self.graph = deepcopy(self.initial_graph)
+        self.vertex_desired_degree = self.initial_vertex_desired_degree.copy()
+
+        self.action_sequence = []
+        self.exception_occurred = False
+
+        self.template_center = self._select_half_edge_template_center(self.graph.half_edge_list())
+        self._build_template()
+
+        self.num_steps = 0
+
+        self._update_scores_on_reset()
+
         self.terminated = self.is_terminated()
 
         obs = self._get_obs()
         return obs, {"score": self.score}
 
     def reset(self, seed=None, options=None):
-        return self._hard_reset()
+        if self.fixed_reset:
+            return self._reset_to_initial_state()
+        else:
+            return self._hard_reset()
 
 
 #######################################################################################################################
