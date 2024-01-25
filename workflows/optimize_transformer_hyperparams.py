@@ -13,23 +13,10 @@ import sys
 import datetime
 
 sys.path.append(os.getcwd())
-from envs.random_polygon_tiler_env import RandomPolygonEnv
+from envs.random_polygon_tiler_env import initialize_environment, RandomPolygonEnv
 from src.transformer_feature_extractor import TransformerFeatureExtractor as FeatureExtractor
 from src.policy import CustomActorCriticPolicy
 from src.utils import load_yaml_config
-
-
-def initialize_environment():
-    env_config = config["environment"]
-    env = RandomPolygonEnv.from_config(env_config)
-    return env
-
-
-def initialize_eval_environment():
-    env_config = config["environment"]
-    env_config["incremental_reward"] = False
-    env = RandomPolygonEnv.from_config(env_config)
-    return env
 
 
 def sample_ppo_params(trial: optuna.Trial):
@@ -50,7 +37,7 @@ def sample_ppo_params(trial: optuna.Trial):
     feature_extractor_layers = trial.suggest_int("feature_extractor_layers", 2, 10)
     num_features_per_head = 2 ** trial.suggest_int("feature_extractor_size", 4, 7)
     num_heads = 2 * trial.suggest_int("num_heads", 2, 6)
-    feature_extractor_size = num_features_per_head*num_heads
+    feature_extractor_size = num_features_per_head * num_heads
     dropout = trial.suggest_float("dropout", 1e-3, 0.4, log=True)
 
     sequence_length = config["environment"]["template_size"]
@@ -128,7 +115,7 @@ class Objective:
     def __call__(self, trial):
 
         env = make_vec_env(
-            initialize_environment,
+            lambda: initialize_environment(env_config),
             NUM_ENVS,
             vec_env_cls=SubprocVecEnv
         )
@@ -147,7 +134,11 @@ class Objective:
 
         model = PPO(**kwargs)
 
-        eval_env = make_vec_env(initialize_eval_environment, 1)
+        eval_env = make_vec_env(
+            lambda: initialize_environment(env_config, eval=True),
+            NUM_ENVS
+        )
+
         eval_callback = TrialEvalCallback(
             eval_env,
             trial,
@@ -190,6 +181,7 @@ if __name__ == "__main__":
     config_filename = args.config
     gpu_id = args.gpu
     config = load_yaml_config(config_filename)
+    env_config = config["environment"]
 
     N_TRIALS = int(config["num_trials"])
     N_STARTUP_TRIALS = 5

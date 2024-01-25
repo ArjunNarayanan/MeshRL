@@ -706,3 +706,10 @@ def initialize_graph_and_desired_degree(polygon_degree, target_angle):
                       interior_angles.items()}
 
     return graph, desired_degree
+
+
+def initialize_environment(env_config, eval=False):
+    env_config = env_config.copy()
+    if eval:
+        env_config["incremental_reward"] = False
+    return RandomPolygonEnv.from_config(env_config)

@@ -13,22 +13,10 @@ import sys
 import datetime
 
 sys.path.append(os.getcwd())
-from envs.random_polygon_tiler_env import RandomPolygonEnv
+from envs.random_polygon_tiler_env import initialize_environment
 from src.convolution_feature_extractor import ConvolutionFeatureExtractor as FeatureExtractor
 from src.policy import CustomActorCriticPolicy
 from src.utils import load_yaml_config
-
-
-def initialize_environment():
-    env = RandomPolygonEnv.from_config(env_config)
-    return env
-
-
-def initialize_eval_environment():
-    eval_config = env_config.copy()
-    eval_config["incremental_reward"] = False
-    env = RandomPolygonEnv.from_config(eval_config)
-    return env
 
 
 def sample_ppo_params(trial: optuna.Trial):
@@ -107,7 +95,7 @@ class TrialEvalCallback(EvalCallback):
             if self.trial.should_prune():
                 self.is_pruned = True
                 raise optuna.TrialPruned()
-            
+
         return True
 
 
@@ -118,7 +106,7 @@ class Objective:
     def __call__(self, trial):
 
         env = make_vec_env(
-            initialize_environment,
+            lambda: initialize_environment(env_config),
             NUM_ENVS,
             vec_env_cls=SubprocVecEnv
         )
@@ -137,7 +125,11 @@ class Objective:
 
         model = PPO(**kwargs)
 
-        eval_env = make_vec_env(initialize_eval_environment, 1)
+        eval_env = make_vec_env(
+            lambda: initialize_environment(env_config, eval=True),
+            NUM_ENVS
+        )
+
         eval_callback = TrialEvalCallback(
             eval_env,
             trial,
@@ -180,6 +172,7 @@ if __name__ == "__main__":
     config_filename = args.config
     gpu_id = args.gpu
     config = load_yaml_config(config_filename)
+    env_config = config["environment"]
 
     output_folder = os.path.dirname(config_filename)
     env_config = config["environment"]
