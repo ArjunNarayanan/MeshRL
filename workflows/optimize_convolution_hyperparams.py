@@ -13,7 +13,7 @@ import sys
 import datetime
 
 sys.path.append(os.getcwd())
-from envs.random_polygon_tiler_env import initialize_environment
+from envs.random_polygon_tiler_env import initialize_environment, RandomPolygonEnv
 from src.convolution_feature_extractor import ConvolutionFeatureExtractor as FeatureExtractor
 from src.policy import CustomActorCriticPolicy
 from src.utils import load_yaml_config
