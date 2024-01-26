@@ -45,23 +45,38 @@ def get_best_returns_for_size(model, poly_degree, num_trials=10, n_eval_episodes
     return best_returns
 
 
-input_folder = "experiments/tiler-random-polygon/triangle/tri-5-50-scaled/"
-checkpoint_file = os.path.join(input_folder, "best_model.zip")
-config_file = os.path.join(input_folder, "config.yml")
-config = load_yaml_config(config_file)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-input", help="input folder", required=True)
+    parser.add_argument("-min", help="min polygon degree", type=int, required=True)
+    parser.add_argument("-max", help="max polygon degree", type=int, required=True)
+    parser.add_argument("-step", help="step size for polygon degree", type=int, default=5)
+    parser.add_argument("-model", help="model file name", default="best_model.zip")
+    parser.add_argument("-config", help="config file name", default="config.yml")
 
-model = load_model_from_checkpoint(checkpoint_file, config_file)
+    args = parser.parse_args()
 
-avg_returns, std_returns = [], []
-poly_degrees = list(range(5, 101, 5))
-for poly_degree in poly_degrees:
-    best_returns = get_best_returns_for_size(model, poly_degree, max_steps_factor=4)
-    avg = np.mean(best_returns)
-    std = np.std(best_returns)
-    print("Poly : ", poly_degree, "\tAVG : ", avg, "\tSTD : ", std)
-    avg_returns.append(avg)
-    std_returns.append(std)
+    input_folder = args.input
+    checkpoint_file = os.path.join(input_folder, args.model)
+    config_file = os.path.join(input_folder, args.config)
+    config = load_yaml_config(config_file)
 
-fig = plot_returns_vs_poly_degree(poly_degrees, avg_returns, std_returns)
-# outputfile = os.path.join(input_folder, "avg_returns.png")
-# fig.savefig(outputfile)
+    model = load_model_from_checkpoint(checkpoint_file, config_file)
+
+    avg_returns, std_returns = [], []
+    poly_degrees = list(range(args.min, args.max + 1, args.step))
+    for poly_degree in poly_degrees:
+        best_returns = get_best_returns_for_size(model, poly_degree, max_steps_factor=3)
+        avg = np.mean(best_returns)
+        std = np.std(best_returns)
+        print("Poly : ", poly_degree, "\tAVG : ", avg, "\tSTD : ", std)
+        avg_returns.append(avg)
+        std_returns.append(std)
+
+    fig = plot_returns_vs_poly_degree(poly_degrees, avg_returns, std_returns)
+    outputfolder = os.path.join(input_folder, "output")
+    if not os.path.isdir(outputfolder):
+        os.makedirs(outputfolder)
+
+    outputfile = os.path.join(outputfolder, "avg_returns.png")
+    fig.savefig(outputfile)

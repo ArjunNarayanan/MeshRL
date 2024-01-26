@@ -17,3 +17,7 @@ def plot_returns_vs_poly_degree(poly_degrees, avg_returns, std_returns):
     ax.set_ylim(0, 1)
     fig.tight_layout()
     return fig
+
+
+def plot_parameter_importances(importances):
+    return
