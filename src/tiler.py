@@ -1,6 +1,8 @@
 import networkx as nx
 import itertools
 from collections import deque
+import numpy as np
+import scipy as sp
 
 
 class HalfEdge:
@@ -38,6 +40,7 @@ class Tiler(nx.MultiGraph):
 
         self.vertex_coordinates = None
         self.user_defined_vertices = set()
+        self.boundary_vertices = set()
 
         self.half_edges = dict()
         self.vertex_degrees = dict()
@@ -55,9 +58,11 @@ class Tiler(nx.MultiGraph):
         if vertex_coordinates is not None:
             assert all(
                 v in vertex_coordinates for v in vertex_ids), "Some vertices were not found in vertex_coordinates"
+            for k, v in vertex_coordinates.items():
+                vertex_coordinates[k] = np.array(v)
 
         graph.vertex_coordinates = vertex_coordinates
-        graph.user_defined_vertices = vertex_ids
+        graph.user_defined_vertices = vertex_ids.copy()
         graph.next_half_edge_index = num_half_edges
         graph.next_vertex_index = num_vertices
         graph.next_face_index = num_faces
@@ -82,6 +87,7 @@ class Tiler(nx.MultiGraph):
         graph.initialize_boundary_source_target_associations()
         graph.initialize_vertex_degrees()
         graph.initialize_face_degrees()
+        graph.initialize_boundary_vertices()
 
         return graph
 
@@ -237,6 +243,12 @@ class Tiler(nx.MultiGraph):
         degrees = self.vertex_degree_of_list(vertices)
         self.vertex_degrees.update(zip(vertices, degrees))
 
+    def initialize_boundary_vertices(self):
+        for hidx in self.half_edge_list():
+            if self.half_edge_on_boundary(hidx):
+                src = self.source_vertex(hidx, tag=False)
+                self.boundary_vertices.add(src)
+
     def initialize_face_degrees(self):
         faces = self.face_list(tag=True)
         degrees = self.face_degree_of_list(faces)
@@ -355,8 +367,9 @@ class Tiler(nx.MultiGraph):
         vidx = self._ensure_tag_form(vidx, self.vertex_tag)
         return (hidx for vidx, hidx in self.edges(vidx) if self.is_half_edge(hidx))
 
-    def vertex_on_boundary(self, vidx):
-        return any(self.half_edge_on_boundary(hidx) for hidx in self._vertex_to_halfedge(vidx))
+    def is_boundary_vertex(self, vidx):
+        vidx = self._ensure_untagged_form(vidx)
+        return vidx in self.boundary_vertices
 
     def face_half_edges(self, face_idx, tag=True):
         """return all half_edges connected to a face"""
@@ -524,23 +537,38 @@ class Tiler(nx.MultiGraph):
         if self.vertex_coordinates is not None:
             coord1 = self.vertex_coordinate(next_vertex)
             coord2 = self.vertex_coordinate(previous_vertex)
-            new_coord = [(c1 + c2) / 2 for c1, c2 in zip(coord1, coord2)]
-            return new_coord
+            return 0.5 * (coord1 + coord2)
         else:
             return None
 
-    def create_vertex(self, coord=None):
+    def create_vertex(self, coord=None, on_boundary=False):
         new_vertex_idx = (self.next_vertex_index, self.vertex_tag)
         self.add_node(new_vertex_idx, type="vertex")
+
         if coord is not None and self.vertex_coordinates is not None:
             # assert len(coord) == 2
             self.vertex_coordinates[self.next_vertex_index] = coord
+
+        if on_boundary:
+            self.boundary_vertices.add(self.next_vertex_index)
+
         self.next_vertex_index += 1
         return new_vertex_idx
 
     def set_vertex_degree(self, vidx, degree):
         vidx = self._ensure_tag_form(vidx, self.vertex_tag)
         self.vertex_degrees[vidx] = degree
+
+    def set_vertex_coordinate(self, vidx, coord):
+        vidx = self._ensure_untagged_form(vidx)
+        self.vertex_coordinates[vidx] = np.array(coord)
+
+    def set_user_defined_vertex(self, vidx, flag):
+        vidx = self._ensure_untagged_form(vidx)
+        if flag:
+            self.user_defined_vertices.add(vidx)
+        else:
+            self.user_defined_vertices.discard(vidx)
 
     def set_target_vertex(self, hidx, vidx):
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
@@ -565,7 +593,7 @@ class Tiler(nx.MultiGraph):
         current_source_vertex = self.source_vertex(hidx)
 
         new_vertex_coord = self.get_new_vertex_coordinate(current_target_vertex, current_source_vertex)
-        new_vertex_idx = self.create_vertex(new_vertex_coord)
+        new_vertex_idx = self.create_vertex(new_vertex_coord, on_boundary=True)
         self.set_vertex_degree(new_vertex_idx, 2)
 
         next_half_edge = self.next_half_edge(hidx)
@@ -592,7 +620,7 @@ class Tiler(nx.MultiGraph):
         current_target_vertex = self.target_vertex(hidx)
         current_source_vertex = self.source_vertex(hidx)
         new_vertex_coord = self.get_new_vertex_coordinate(current_target_vertex, current_source_vertex)
-        new_vertex_idx = self.create_vertex(new_vertex_coord)
+        new_vertex_idx = self.create_vertex(new_vertex_coord, on_boundary=False)
         self.set_vertex_degree(new_vertex_idx, 2)
 
         self.set_target_vertex(hidx, new_vertex_idx)
@@ -616,12 +644,13 @@ class Tiler(nx.MultiGraph):
         else:
             new_vertex = self._insert_interior_vertex(hidx)
 
-    def _delete_vertex_coordinates(self, vidx):
+    def _delete_vertex_metadata(self, vidx):
         vidx = self._ensure_untagged_form(vidx)
         if self.vertex_coordinates is not None:
             coords = self.vertex_coordinates.pop(vidx, None)
             if coords is None:
                 print("Warning: deleted vertex not found in vertex coordinates")
+        self.boundary_vertices.discard(vidx)
 
     def _delete_half_edge(self, hidx):
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
@@ -636,7 +665,7 @@ class Tiler(nx.MultiGraph):
         vidx = self._ensure_tag_form(vidx, self.vertex_tag)
         self.remove_node(vidx)
         self.vertex_degrees.pop(vidx)
-        self._delete_vertex_coordinates(vidx)
+        self._delete_vertex_metadata(vidx)
 
     def _delete_boundary_vertex(self, hidx):
         """deletes vertex at source of hidx"""
@@ -848,33 +877,63 @@ class Tiler(nx.MultiGraph):
 
         return neighbors
 
-    def _accumulate_neighbor_coordinates(self):
-        accumulated_coords = {k: 2 * [0] for k in self.vertex_coordinates.keys()}
-        for hidx in self.halfedge_list():
-            src_vidx = self.source_vertex(hidx, tag=False)
-            src_coords = self.vertex_coordinates[src_vidx]
-            dst_vidx = self.target_vertex(hidx, tag=False)
-            dst_coords = accumulated_coords[dst_vidx]
+    def _construct_sparse_vertex_laplace_operator(self, vertex2index):
+        num_verts = len(vertex2index)
 
-            dst_coords[0] += src_coords[0]
-            dst_coords[1] += src_coords[1]
+        row_indices = []
+        col_indices = []
+        values = []
 
-        return accumulated_coords
+        def update_row_col_val(row, col, val):
+            row_indices.append(vertex2index[row])
+            col_indices.append(vertex2index[col])
+            values.append(val)
 
-    def laplace_smooth_vertices(self):
-        accumulated_coords = self._accumulate_neighbor_coordinates()
+        for hidx in self.half_edge_list():
+            src = self.source_vertex(hidx, tag=False)
+            dst = self.target_vertex(hidx, tag=False)
 
-        # average the coordinates
-        for vidx, coords in accumulated_coords.items():
-            degree = self.vertex_degree(vidx)
+            if self.half_edge_on_boundary(hidx):
+                if not self.is_user_defined_vertex(src):
+                    update_row_col_val(src, dst, 1.0)
+                if not self.is_user_defined_vertex(dst):
+                    update_row_col_val(dst, src, 1.0)
+            else:
+                if (not self.is_boundary_vertex(src)) and (not self.is_user_defined_vertex(src)):
+                    update_row_col_val(src, dst, 1.0)
 
-            coords[0] /= degree
-            coords[1] /= degree
+        # Set all user defined vertices to have same coords
+        for vidx, idx in vertex2index.items():
+            if self.is_user_defined_vertex(vidx):
+                update_row_col_val(idx, idx, 1.0)
 
-        # set boundary coordinates to their original values
-        for vidx in accumulated_coords.keys():
-            if self.vertex_on_boundary(vidx):
-                accumulated_coords[vidx] = self.vertex_coordinates[vidx]
+        matrix = sp.sparse.csr_matrix((values, (row_indices, col_indices)), shape=(num_verts, num_verts))
+        return matrix
 
-        self.vertex_coordinates = accumulated_coords
-        return
+    def _get_vertex_degrees_for_smoothing(self, index2vertex):
+        num_verts = len(index2vertex)
+        degrees = num_verts * [1]
+        for idx, vidx in enumerate(index2vertex):
+            if self.is_boundary_vertex(vidx):
+                if not self.is_user_defined_vertex(vidx):
+                    degrees[idx] = 2
+            else:
+                degrees[idx] = self.vertex_degree(vidx)
+
+        return degrees
+
+    def smooth_vertices(self, num_iter=3):
+        index2vertex = self.vertex_list(tag=False)
+        num_verts = len(index2vertex)
+        vertex2index = dict(zip(index2vertex, range(num_verts)))
+
+        matrix = self._construct_sparse_vertex_laplace_operator(vertex2index)
+        coordinates = np.array([self.vertex_coordinate(vidx) for vidx in index2vertex])
+        degrees = np.array(self._get_vertex_degrees_for_smoothing(index2vertex)).reshape(-1, 1)
+
+        for step in range(num_iter):
+            coordinates = matrix @ coordinates
+            coordinates /= degrees
+
+        for idx, vidx in enumerate(index2vertex):
+            self.set_vertex_coordinate(vidx, coordinates[idx])

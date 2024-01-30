@@ -28,6 +28,9 @@ class TestInsertVertex(unittest.TestCase):
     def test_inserted_vertex_id(self):
         self.assertEqual(self.inserted_vertex, (3, self.graph.vertex_tag))
 
+    def test_is_boundary_vertex(self):
+        self.assertTrue(self.graph.is_boundary_vertex(3))
+
     def test_number_of_nodes(self):
         self.assertEqual(self.graph.number_of_vertices(), 4)
         self.assertEqual(self.graph.number_of_half_edges(), 4)
@@ -37,7 +40,7 @@ class TestInsertVertex(unittest.TestCase):
 
     def test_vertex_coordinate(self):
         new_coord = self.graph.vertex_coordinate(3)
-        self.assertEqual(new_coord, [0.5, 0])
+        self.assertTrue((new_coord == [0.5, 0]).all())
 
     def test_number_of_edges(self):
         self.assertEqual(self.graph.number_of_edges_of_type("source"), 8)

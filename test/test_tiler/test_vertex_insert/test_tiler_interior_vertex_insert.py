@@ -26,6 +26,9 @@ class TestInsertVertex(unittest.TestCase):
         self.graph = initialize_triangle_graph()
         self.vidx = self.graph._insert_interior_vertex(1)
 
+    def test_is_boundary_vertex(self):
+        self.assertFalse(self.graph.is_boundary_vertex(4))
+
     def test_inserted_vertex_id(self):
         self.assertEqual(self.vidx, (4, self.graph.vertex_tag))
 
@@ -38,7 +41,7 @@ class TestInsertVertex(unittest.TestCase):
 
     def test_vertex_coordinate(self):
         new_coord = self.graph.vertex_coordinate(4)
-        self.assertEqual(new_coord, [0, 0])
+        self.assertTrue((new_coord == [0, 0]).all())
 
     def test_number_of_edges(self):
         self.assertEqual(self.graph.number_of_edges_of_type("source"), 12)

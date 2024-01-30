@@ -20,6 +20,10 @@ class TestActions(unittest.TestCase):
         self.graph.insert_vertex(12)
         self.graph.insert_vertex(4)
 
+    def test_boundary_vertex(self):
+        self.assertFalse(self.graph.is_boundary_vertex(10))
+        self.assertTrue(self.graph.is_boundary_vertex(11))
+
     def test_number_of_nodes(self):
         self.assertEqual(self.graph.number_of_vertices(), 12)
         self.assertEqual(self.graph.number_of_half_edges(), 17)

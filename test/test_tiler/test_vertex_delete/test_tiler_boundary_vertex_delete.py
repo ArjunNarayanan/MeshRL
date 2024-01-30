@@ -25,6 +25,9 @@ class TestDeleteVertex(unittest.TestCase):
         self.graph = initialize_triangle_graph()
         self.graph._delete_boundary_vertex(3)
 
+    def test_is_boundary_vertex(self):
+        self.assertTrue(3 not in self.graph.boundary_vertices)
+
     def test_number_of_nodes(self):
         self.assertEqual(self.graph.number_of_vertices(), 3)
         self.assertEqual(self.graph.number_of_half_edges(), 3)

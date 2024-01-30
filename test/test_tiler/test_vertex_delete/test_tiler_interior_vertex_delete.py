@@ -17,6 +17,9 @@ class TestDeleteVertex(unittest.TestCase):
         self.graph._delete_interior_vertex(2)
         self.hidx = [0, 1, 3, 4, 5, 7]
 
+    def test_is_boundary_vertex(self):
+        self.assertTrue(4 not in self.graph.boundary_vertices)
+
     def test_number_of_nodes(self):
         self.assertEqual(self.graph.number_of_vertices(), 4)
         self.assertEqual(self.graph.number_of_half_edges(), 6)

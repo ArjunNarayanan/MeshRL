@@ -30,6 +30,10 @@ class TestDeleteVertex(unittest.TestCase):
         self.graph.delete_source_vertex(6)
         self.half_edges = [0, 1, 2, 4, 5, 7]
 
+    def test_is_boundary_vertex(self):
+        self.assertTrue(all(self.graph.is_boundary_vertex(vidx) for vidx in range(4)))
+        self.assertTrue(4 not in self.graph.boundary_vertices)
+
     def test_number_of_nodes(self):
         self.assertEqual(self.graph.number_of_vertices(), 4)
         self.assertEqual(self.graph.number_of_half_edges(), 6)
