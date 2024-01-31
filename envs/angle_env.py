@@ -208,12 +208,20 @@ class AngleEnv(gym.Env):
 
         self.half_edge_to_index = {half_edge: idx for idx, half_edge in enumerate(self.index_to_half_edge)}
 
-    def _normalize_coordinates(self, coordinates):
+    def _normalize_coordinates_archive(self, coordinates):
         scale = np.linalg.norm(coordinates[1] - coordinates[0])
         rot = self._get_feature_rotation_matrix(coordinates[0], coordinates[1])
         coordinates = (coordinates - coordinates[0]) / scale
         coordinates = (rot @ coordinates.transpose()).transpose()
         return coordinates
+
+    def _normalize_coordinates(self, coordinates):
+        rot = self._get_feature_rotation_matrix(coordinates[0], coordinates[1])
+        centered_coordinates = (coordinates - coordinates[0])
+        scale = max(np.linalg.norm(centered_coordinates, axis=1).max(), 0.1)
+        scaled_coordinates = centered_coordinates / scale
+        normalized_coordinates = (rot @ scaled_coordinates.transpose()).transpose()
+        return normalized_coordinates
 
     def _get_coordinate_features(self, vertices):
         coordinates = np.array([self.graph.vertex_coordinate(v) for v in vertices])
