@@ -5,6 +5,14 @@ import numpy as np
 import scipy as sp
 
 
+def induced_angle(v1, v2):
+    dotp = (v1 * v2).sum(axis=1)
+    detp = (v1[:, 0] * v2[:, 1] - v1[:, 1] * v2[:, 0])
+    angle = np.degrees(np.arctan2(detp, dotp))
+    angle[angle < 0] += 360
+    return angle
+
+
 class HalfEdge:
     def __init__(
             self,
@@ -937,3 +945,31 @@ class Tiler(nx.MultiGraph):
 
         for idx, vidx in enumerate(index2vertex):
             self.set_vertex_coordinate(vidx, coordinates[idx])
+
+    def half_edge_angles(self):
+        coordinates = np.array([v for k, v in self.vertex_coordinates.items()])
+        index2vertex = [k for k, _ in self.vertex_coordinates.items()]
+        num_verts = len(index2vertex)
+        vertex2index = dict(zip(index2vertex, range(num_verts)))
+
+        half_edges = self.half_edge_list()
+        num_half_edges = len(half_edges)
+
+        half_edge_source = num_half_edges * [0]
+        half_edge_next = num_half_edges * [0]
+        half_edge_prev = num_half_edges * [0]
+
+        for idx, hidx in enumerate(half_edges):
+            half_edge_source[idx] = vertex2index[self.source_vertex(hidx, tag=False)]
+            half_edge_next[idx] = vertex2index[self.target_vertex(hidx, tag=False)]
+            half_edge_prev[idx] = vertex2index[self.source_vertex(self.previous_half_edge(hidx), tag=False)]
+
+        C = coordinates[half_edge_source]
+        N = coordinates[half_edge_next]
+        P = coordinates[half_edge_prev]
+
+        v1 = N - C
+        v2 = P - C
+        angles = induced_angle(v1, v2)
+
+        return angles

@@ -1,3 +1,4 @@
+import numpy as np
 import yaml
 from envs.random_polygon_tiler_env import RandomPolygonEnv
 from src.feature_extractor import feature_extractor_initializer
