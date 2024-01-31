@@ -29,7 +29,7 @@ class TestHexAngles(unittest.TestCase):
 
     def test_angles(self):
         angles = self.graph.half_edge_angles()
-        self.assertTrue((angles == 90).all())
+        self.assertTrue(all(a == 90 for a in angles.values()))
 
 
 if __name__ == "__main__":

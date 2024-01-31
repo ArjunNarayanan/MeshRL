@@ -15,6 +15,7 @@ def angle_between(v1, v2):
 
 
 def generate_coordinates(polygon_degree, scale=0.5):
+    assert polygon_degree >= 3
     angle = 2 * np.pi / polygon_degree
     angular_increments = angle * np.arange(polygon_degree)
     radii = (1 - scale) + scale * np.random.rand(polygon_degree)

@@ -359,7 +359,8 @@ class Tiler(nx.MultiGraph):
 
     def face_degree(self, fidx):
         fidx = self._ensure_tag_form(fidx, self.face_tag)
-        return self.degree(fidx)
+        return self.face_degrees[fidx]
+        # return self.degree(fidx)
 
     def face_degree_of_list(self, face_list):
         face_list = [self._ensure_tag_form(fidx, self.face_tag) for fidx in face_list]
@@ -510,7 +511,7 @@ class Tiler(nx.MultiGraph):
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
         face_idx = self.face(hidx)
         face_degree = self.face_degree(face_idx)
-        self.set_face_degree(face_idx, face_degree - 2)
+        self.set_face_degree(face_idx, face_degree - k)
 
         new_face_idx = self.create_face()
         self.set_face_degree(new_face_idx, k + 2)
@@ -971,5 +972,6 @@ class Tiler(nx.MultiGraph):
         v1 = N - C
         v2 = P - C
         angles = induced_angle(v1, v2)
+        angles_dict = dict(zip(half_edges, angles))
 
-        return angles
+        return angles_dict

@@ -24,3 +24,9 @@ def generate_coordinates():
     coords = dict(zip(range(6), coords))
     return coords
 
+
+if __name__ == "__main__":
+    graph = initialize_graph()
+    graph.insert_half_edge(0, 2)
+    graph.insert_vertex(7)
+    graph.insert_half_edge(8, 1)
