@@ -8,7 +8,7 @@ import os
 import datetime
 
 sys.path.append(os.getcwd())
-from envs.random_polygon_tiler_env import RandomPolygonEnv
+from envs.environment_maker import initialize_environment, get_env_feature_size
 from src.feature_extractor import feature_extractor_initializer
 from src.policy import CustomActorCriticPolicy
 from src.utils import load_yaml_config
@@ -17,13 +17,6 @@ from src.utils import load_yaml_config
 def make_output_dir_if_necessary(output_dir):
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
-
-
-def initialize_environment(env_config, eval=False):
-    if eval:
-        env_config["incremental_reward"] = False
-    env = RandomPolygonEnv.from_config(env_config)
-    return env
 
 
 if __name__ == "__main__":
@@ -45,31 +38,33 @@ if __name__ == "__main__":
     #   SETTING UP ENVIRONMENTS
     print("\n\tINITIALIZING ENVIRONMENT : ")
     env_config = config["environment"]
+    eval_env_config = env_config.copy()
+    eval_env_config["incremental_reward"] = False
     if "logdir" not in env_config:
         env_config["logdir"] = output_dir
 
     num_envs = args.num_envs
     if num_envs > 1:
         env = make_vec_env(
-            lambda: initialize_environment(env_config, eval=False),
+            lambda: initialize_environment(env_config),
             num_envs,
             vec_env_cls=SubprocVecEnv,
         )
         eval_env = make_vec_env(
-            lambda: initialize_environment(env_config, eval=True),
+            lambda: initialize_environment(eval_env_config),
             num_envs,
             vec_env_cls=SubprocVecEnv,
         )
     else:
         env = initialize_environment()
-        eval_env = initialize_environment(env_config, eval=True)
+        eval_env = initialize_environment(eval_env_config)
     ###################################################################################################################
 
     ###################################################################################################################
     # SETTING UP POLICY
     print("\n\tINITIALIZING POLICY : ")
     features_extractor_class, features_extractor_kwargs = feature_extractor_initializer(config)
-    features_extractor_kwargs.update({"input_features": RandomPolygonEnv.get_feature_size()})
+    features_extractor_kwargs.update({"input_features": get_env_feature_size(env_config)})
 
     policy_kwargs = config["policy"]
     policy_kwargs["features_extractor_class"] = features_extractor_class

@@ -89,6 +89,9 @@ class TestCompositeActions(unittest.TestCase):
         self.assertAlmostEqual(self.env.average_face_score, 1 / 6)
         self.assertAlmostEqual(self.env.average_angle_score, 2 / 7)
 
+        reward = self.env.face_reward_weight * (1 / 3 - 1 / 6) + self.env.angle_reward_weight * (1 / 2 - 2 / 7)
+        self.assertAlmostEqual(self.env.reward, reward)
+
 
 if __name__ == "__main__":
     unittest.main()
