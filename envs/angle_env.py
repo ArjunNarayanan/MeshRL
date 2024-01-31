@@ -54,15 +54,7 @@ class AngleEnv(gym.Env):
 
         self.face_reward_weight = face_reward_weight
         self.angle_reward_weight = angle_reward_weight
-        self._update_face_scores()
-        self._update_angle_scores()
-        self.initial_face_score = self.average_face_score
-        self.initial_angle_score = self.average_angle_score
-        self.score = self.face_reward_weight * self.average_face_score + \
-                     self.angle_reward_weight * self.average_angle_score
-        self.initial_score = self.score
-        self.min_score = self.score
-        self.reward = 0
+        self._update_scores_on_reset()
 
         self.fixed_reset = fixed_reset
         self.exception_occurred = False
@@ -488,6 +480,11 @@ class AngleEnv(gym.Env):
         self.polygon_degree = np.random.choice(self.polygon_degree_range)
         self.graph = initialize_random_polygon(self.polygon_degree)
 
+        self._update_scores_on_reset()
+        self.max_steps = int(self.max_steps_factor * self.polygon_degree)
+        self.num_steps = 0
+        self.terminated = self.is_terminated()
+
         self.initial_graph = deepcopy(self.graph)
         self.action_sequence = []
         self.exception_occurred = False
@@ -495,14 +492,8 @@ class AngleEnv(gym.Env):
         self.template_center = self._select_half_edge_template_center(self.graph.half_edge_list())
         self._build_template()
 
-        self.max_steps = int(self.max_steps_factor * self.polygon_degree)
-        self.num_steps = 0
-
-        self._update_scores_on_reset()
-
-        self.terminated = self.is_terminated()
-
         obs = self._get_obs()
+
         return obs, {"score": self.score}
 
     def _reset_to_initial_state(self):
