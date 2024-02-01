@@ -6,7 +6,7 @@ import math
 import glob
 
 sys.path.append(os.getcwd())
-from envs.random_polygon_tiler_env import RandomPolygonEnv
+from envs.environment_maker import initialize_environment, get_env_feature_size
 from src.render import Renderer
 from src.utils import load_yaml_config, load_model_from_checkpoint
 
@@ -120,7 +120,7 @@ if __name__ == "__main__":
         env_config["min_polygon_degree"] = polygon_degree
         env_config["max_polygon_degree"] = polygon_degree
 
-    env = RandomPolygonEnv.from_config(env_config)
+    env = initialize_environment(env_config)
     max_steps = env.max_steps
     NUM_DIGITS = int(math.log10(max_steps))
 
