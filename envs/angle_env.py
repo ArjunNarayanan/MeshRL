@@ -420,12 +420,12 @@ class AngleEnv(gym.Env):
             self._step_delete_source_vertex(half_edge)
 
     def _local_reset_template_center(self):
-        hidx = self.index_to_half_edge[0]
-        if not self.graph.is_half_edge(hidx):
-            idx = np.random.choice([1, 2])
-            hidx = self.index_to_half_edge[idx]
-
-        self.template_center = hidx
+        # set the first valid half-edge in the existing template as the new template center
+        self.template_center = None
+        for hidx in self.index_to_half_edge:
+            if self.graph.is_half_edge(hidx):
+                self.template_center = hidx
+                break
 
     def _global_reset_template_center(self):
         self.template_center = self._select_half_edge_template_center(self.graph.half_edge_list())
@@ -435,6 +435,8 @@ class AngleEnv(gym.Env):
             self._global_reset_template_center()
         else:
             self._local_reset_template_center()
+            if self.template_center is None:
+                self._global_reset_template_center()
 
     def _get_reward(self):
         return self.reward

@@ -5,37 +5,41 @@ import sys
 sys.path.append(os.getcwd())
 from src.tiler import Tiler
 from src.render import Renderer
-from envs.random_polygon_tiler_env import RandomPolygonEnv
+from envs.angle_env import AngleEnv
 from src.utils import load_yaml_config
 
-# config_fn = "experiments/random-polygon/tri-poly-10-optuna/config.yml"
-# config = load_yaml_config(config_fn)
-# env = RandomPolygonEnv.from_config(config["environment"])
-# env._step_insert_vertex(None)
+if __name__ == "__main__":
+    filename = "../debug/experiments/except-env-4.pkl"
+    with open(filename, "rb") as f:
+        data = pickle.load(f)
 
+    graph = data["graph"]
+    env = AngleEnv(3, [5])
+    env.graph = graph
+    env._update_scores_on_reset()
+    env.template_center = env._select_half_edge_template_center(env.graph.half_edge_list())
+    env._build_template()
 
-filename = "debug/except-env-1.pkl"
-with open(filename, "rb") as f:
-    data = pickle.load(f)
+    actions = data["actions"]
+    # renderer = Renderer(env.graph, env.graph.vertex_coordinates, label_halfedge=True)
+    # renderer.plot()
 
-graph = data["graph"]
+    for idx, data in enumerate(actions):
+        # renderer = Renderer(env.graph, env.graph.vertex_coordinates, label_halfedge=True)
+        # renderer.plot()
 
-env = RandomPolygonEnv(3, [6])
-env.graph = graph
+        hidx = data[0]
+        action = data[1]
+        print("idx : ", idx, "\thidx : ", hidx, "\taction : ", action)
+        env._step_half_edge_action(hidx, action)
+        env.num_steps += 1
 
-actions = data["actions"]
+        env._update_half_edge_template_center()
+        print("Template center : ", env.template_center)
+        env._build_template()
+        env.terminated = env.is_terminated()
+        observation = env._get_obs()
+        # reward = env._get_reward()
 
-idx = 0
-
-print("Index : ", idx)
-action = actions[idx]
-print("Action : ", action, "\n")
-halfedge, action_type = action
-env._step_half_edge_action(halfedge, action_type)
-env._update_half_edge_template_center()
-env._build_template()
-terminated = env.is_terminated()
-observation = env._get_obs()
-idx += 1
-
-graph = env.graph
+    # renderer = Renderer(env.graph, env.graph.vertex_coordinates)
+    # renderer.plot()
