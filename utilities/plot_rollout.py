@@ -42,24 +42,25 @@ def make_output_folder(dir):
         os.makedirs(dir)
 
 
-def plot_env(env, filename=None):
+def plot_env(env, filename=None, plot_vertex_scores=False):
     renderer = Renderer(env.graph, env.graph.vertex_coordinates)
     renderer.coords = env.graph.vertex_coordinates
     renderer.plot()
-    renderer.plot_vertex_scores(env.vertex_desired_degree)
+    if plot_vertex_scores:
+        renderer.plot_vertex_scores(env.vertex_desired_degree)
     renderer.plot_face_scores(env.face_desired_degree)
     if filename is not None:
         renderer.fig.savefig(filename)
 
 
-def plot_rollout(rollout):
+def plot_rollout(rollout, plot_vertex_scores=False):
     fig_output_folder = os.path.join(output_folder, "rollout-" + str(rollout))
     make_output_folder(fig_output_folder)
 
     step = 0
     figname = "step-" + str(step).zfill(NUM_DIGITS) + ".png"
     output_file = os.path.join(fig_output_folder, figname)
-    plot_env(env, filename=output_file)
+    plot_env(env, filename=output_file, plot_vertex_scores=plot_vertex_scores)
     obs = obs_as_tensor(env._get_obs())
     done = env.is_terminated()
 
@@ -68,12 +69,13 @@ def plot_rollout(rollout):
         dist = get_action_distribution(obs)
         obs, done = step_environment(env, dist)
         obs = obs_as_tensor(obs)
-        env.graph.laplace_smooth_vertices()
+
+        env.graph.smooth_vertices(num_iter=smooth_iterations)
 
         figname = "step-" + str(step).zfill(NUM_DIGITS) + ".png"
         output_file = os.path.join(fig_output_folder, figname)
 
-        plot_env(env, filename=output_file)
+        plot_env(env, filename=output_file, plot_vertex_scores=plot_vertex_scores)
         print("Saving figure : ", output_file)
 
     total_reward = abs(env.initial_score - env.score) / env.initial_score
@@ -95,10 +97,14 @@ if __name__ == "__main__":
     parser.add_argument("-input", required=True)
     parser.add_argument("-rollout", default=None)
     parser.add_argument("-degree", default=None, type=int)
+    parser.add_argument("-scores", default=False, type=bool)
+    parser.add_argument("-smooth", default=0, type=int)
 
     args = parser.parse_args()
     input_folder = args.input
     polygon_degree = args.degree
+    plot_vertex_scores = args.scores
+    smooth_iterations = args.smooth
 
     output_folder = os.path.join(input_folder, "figures")
     if not os.path.isdir(output_folder):
@@ -124,4 +130,4 @@ if __name__ == "__main__":
     max_steps = env.max_steps
     NUM_DIGITS = int(math.log10(max_steps))
 
-    plot_rollout(rollout_index)
+    plot_rollout(rollout_index, plot_vertex_scores=plot_vertex_scores)

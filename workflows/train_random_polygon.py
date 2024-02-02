@@ -38,10 +38,11 @@ if __name__ == "__main__":
     #   SETTING UP ENVIRONMENTS
     print("\n\tINITIALIZING ENVIRONMENT : ")
     env_config = config["environment"]
-    eval_env_config = env_config.copy()
-    eval_env_config["incremental_reward"] = False
     if "logdir" not in env_config:
         env_config["logdir"] = output_dir
+
+    eval_env_config = env_config.copy()
+    eval_env_config["incremental_reward"] = False
 
     num_envs = args.num_envs
     if num_envs > 1:
