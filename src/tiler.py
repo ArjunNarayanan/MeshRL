@@ -975,3 +975,31 @@ class Tiler(nx.MultiGraph):
         angles_dict = dict(zip(half_edges, angles))
 
         return angles_dict
+
+
+def _get_vertex_array(tiler: Tiler):
+    num_verts = tiler.number_of_vertices()
+    coordinates = np.array([v for k, v in tiler.vertex_coordinates.items()])
+    vertices = [k for k, v in tiler.vertex_coordinates.items()]
+    vertex2index = dict(zip(vertices, range(num_verts)))
+    return coordinates, vertex2index
+
+
+def _get_edge_array(tiler: Tiler, vertex2index):
+    edge_count = 0
+    edge2index = {}
+    edges = []
+
+    # sorting is not necessary, but it makes it easier to check with test cases
+    halfedges = sorted(tiler.half_edge_list())
+
+    for hidx in halfedges:
+        src = tiler.source_vertex(hidx)
+        dst = tiler.target_vertex(hidx)
+        if (src, dst) not in edge2index:
+            edge2index[(src, dst)] = edge_count
+            edge2index[(dst, src)] = edge_count
+            edges.append([vertex2index[src], vertex2index[dst]])
+            edge_count += 1
+
+    return edges, edge2index
