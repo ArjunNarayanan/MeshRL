@@ -994,12 +994,43 @@ def _get_edge_array(tiler: Tiler, vertex2index):
     halfedges = sorted(tiler.half_edge_list())
 
     for hidx in halfedges:
-        src = tiler.source_vertex(hidx)
-        dst = tiler.target_vertex(hidx)
+        src = tiler.source_vertex(hidx, tag=False)
+        dst = tiler.target_vertex(hidx, tag=False)
         if (src, dst) not in edge2index:
             edge2index[(src, dst)] = edge_count
             edge2index[(dst, src)] = edge_count
             edges.append([vertex2index[src], vertex2index[dst]])
             edge_count += 1
 
-    return edges, edge2index
+    return np.array(edges), edge2index
+
+
+def triangle_connectivity_representation(tiler: Tiler):
+    assert all(tiler.face_degree(fidx) == 3 for fidx in tiler.face_list())
+
+    num_faces = tiler.number_of_faces()
+    coordinates, vertex2index = _get_vertex_array(tiler)
+    edges, edge2index = _get_edge_array(tiler, vertex2index)
+
+    connectivity = np.zeros((num_faces, 3), dtype=int)
+    tri2edge = np.zeros((num_faces, 3), dtype=int)
+
+    for tri_idx, fidx in enumerate(tiler.face_list()):
+        hidx = tiler.first_face_halfedge(fidx)
+        for step in range(3):
+            src = tiler.source_vertex(hidx, tag=False)
+            dst = tiler.target_vertex(hidx, tag=False)
+            connectivity[tri_idx, step] = vertex2index[src]
+            tri2edge[tri_idx, step] = edge2index[(src, dst)]
+            hidx = tiler.next_half_edge(hidx)
+
+    user_vertices = [vertex2index[vidx] for vidx in tiler.user_defined_vertices]
+
+    representation = {
+        "vertex connectivity": connectivity,
+        "coordinates": coordinates,
+        "edges": edges,
+        "edge connectivity": tri2edge,
+        "user vertices": user_vertices
+    }
+    return representation

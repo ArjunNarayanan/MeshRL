@@ -38,3 +38,7 @@ class TestKNN(unittest.TestCase):
             all(n == t for n, t in zip(neighbors, test_neighbors))
         )
 
+
+if __name__ == "__main__":
+    unittest.main()
+

@@ -52,3 +52,7 @@ class TestKNN(unittest.TestCase):
         self.assertTrue(
             all(t == n for t, n in zip(test_neighbors, neighbors))
         )
+
+
+if __name__ == "__main__":
+    unittest.main()
