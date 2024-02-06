@@ -1,7 +1,7 @@
 import unittest
 
 import numpy as np
-from src.tiler import Tiler, _get_vertex_array, _get_edge_array
+from src.tiler import Tiler, _get_vertex_array, _get_edge_array, triangle_connectivity_representation
 
 
 def initialize_graph():
@@ -35,6 +35,7 @@ def generate_coordinates():
 class TestConnectivityPrimitives(unittest.TestCase):
     def setUp(self) -> None:
         self.graph = initialize_graph()
+        self.graph.user_defined_vertices.discard(0)
 
     def test_vertex2index(self):
         coords, vertex2index = _get_vertex_array(self.graph)
@@ -102,6 +103,64 @@ class TestConnectivityPrimitives(unittest.TestCase):
         self.assertTrue((edges == test_edges).all())
         self.assertTrue(len(edge2index) == len(test_edge2index))
         self.assertTrue(all(edge2index[k] == v for k, v in test_edge2index.items()))
+
+    def test_representation(self):
+        representation = triangle_connectivity_representation(self.graph)
+
+        test_vconn = np.array(
+            [
+                [0, 1, 2],
+                [0, 2, 3],
+                [0, 3, 4],
+                [0, 4, 5],
+                [0, 5, 6],
+                [0, 6, 1]
+            ]
+        )
+        vconn = representation["vertex connectivity"]
+        self.assertTrue((vconn == test_vconn).all())
+
+        test_edges = np.array(
+            [
+                [0, 1],
+                [1, 2],
+                [2, 0],
+                [2, 3],
+                [3, 0],
+                [3, 4],
+                [4, 0],
+                [4, 5],
+                [5, 0],
+                [5, 6],
+                [6, 0],
+                [6, 1]
+            ]
+        )
+        edges = representation["edges"]
+        self.assertTrue((edges == test_edges).all())
+
+        test_econn = np.array(
+            [
+                [0, 1, 2],
+                [2, 3, 4],
+                [4, 5, 6],
+                [6, 7, 8],
+                [8, 9, 10],
+                [10, 11, 0]
+            ]
+        )
+        econn = representation["edge connectivity"]
+        self.assertTrue((econn == test_econn).all())
+
+        coords_dict = generate_coordinates()
+        test_coords = np.array([coords_dict[idx] for idx in range(7)])
+        coords = representation["coordinates"]
+        self.assertTrue(np.isclose(coords, test_coords).all())
+
+        test_user_vertices = [1,2,3,4,5,6]
+        user_vertices = representation["user vertices"]
+        self.assertTrue(user_vertices == test_user_vertices)
+
 
 
 if __name__ == "__main__":

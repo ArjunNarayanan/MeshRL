@@ -1,5 +1,5 @@
 import numpy as np
-from src.tiler import Tiler, triangle_connectivity_representation
+from src.tiler import Tiler, refine
 
 
 def initialize_graph():
@@ -30,8 +30,6 @@ def generate_coordinates():
     return coords
 
 
-graph = initialize_graph()
-representation = triangle_connectivity_representation(graph)
-
-test_coords = generate_coordinates()
-coords = representation["coordinates"]
+if __name__=="__main__":
+    graph = initialize_graph()
+    refined_graph = refine(graph)

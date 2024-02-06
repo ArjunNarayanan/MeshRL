@@ -91,7 +91,7 @@ class Renderer:
 
         for idx, coord in self.coords.items():
             degree = self.graph.vertex_degree(idx)
-            desired = desired_degree[idx]
+            desired = desired_degree.get(idx, degree)
             score = (degree - desired)
             x, y = coord
             if score > 0:

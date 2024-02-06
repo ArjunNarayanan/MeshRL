@@ -55,7 +55,7 @@ class Tiler(nx.MultiGraph):
         self.face_degrees = dict()
 
     @classmethod
-    def from_face_loops(cls, face_loops, vertex_coordinates=None):
+    def from_face_loops(cls, face_loops, vertex_coordinates=None, user_vertices=None):
         graph = cls()
 
         num_faces = len(face_loops)
@@ -70,7 +70,12 @@ class Tiler(nx.MultiGraph):
                 vertex_coordinates[k] = np.array(v)
 
         graph.vertex_coordinates = vertex_coordinates
-        graph.user_defined_vertices = vertex_ids.copy()
+
+        if not user_vertices:
+            graph.user_defined_vertices = vertex_ids.copy()
+        else:
+            graph.user_defined_vertices = set(user_vertices)
+
         graph.next_half_edge_index = num_half_edges
         graph.next_vertex_index = num_vertices
         graph.next_face_index = num_faces
@@ -1034,3 +1039,51 @@ def triangle_connectivity_representation(tiler: Tiler):
         "user vertices": user_vertices
     }
     return representation
+
+
+def _refine(vertex_coordinates, edges, vertex_connectivity, edge_connectivity):
+    # get mid-point of edges
+    midpoint_coords = 0.5 * (vertex_coordinates[edges[:, 0]] + vertex_coordinates[edges[:, 1]])
+    vertex_offset = vertex_coordinates.shape[0]
+
+    v0 = vertex_connectivity[:, 0]
+    v1 = vertex_connectivity[:, 1]
+    v2 = vertex_connectivity[:, 2]
+
+    v01 = edge_connectivity[:, 0] + vertex_offset
+    v12 = edge_connectivity[:, 1] + vertex_offset
+    v20 = edge_connectivity[:, 2] + vertex_offset
+
+    # construct new vertex connectivity
+    block1 = np.column_stack([v0, v01, v20])
+    block2 = np.column_stack([v01, v1, v12])
+    block3 = np.column_stack([v01, v12, v20])
+    block4 = np.column_stack([v20, v12, v2])
+    new_vertex_connectivity = np.vstack([block1, block2, block3, block4])
+
+    new_coordinates = np.vstack([vertex_coordinates, midpoint_coords])
+
+    return new_coordinates, new_vertex_connectivity
+
+
+def refine(tiler: Tiler):
+    representation = triangle_connectivity_representation(tiler)
+
+    coords = representation["coordinates"]
+    vconn = representation["vertex connectivity"]
+    edges = representation["edges"]
+    econn = representation["edge connectivity"]
+
+    new_coords, new_conn = _refine(coords, edges, vconn, econn)
+
+    num_coords = new_coords.shape[0]
+    new_coords = dict(zip(range(num_coords), new_coords))
+    new_conn = [c.tolist() for c in new_conn]
+
+    user_vertices = representation["user vertices"]
+    new_tiler = Tiler.from_face_loops(
+        new_conn,
+        vertex_coordinates=new_coords,
+        user_vertices=user_vertices
+    )
+    return new_tiler
