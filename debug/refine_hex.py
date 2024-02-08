@@ -32,4 +32,4 @@ def generate_coordinates():
 
 if __name__=="__main__":
     graph = initialize_graph()
-    refined_graph = refine(graph)
+    refined_graph = refine(graph, 3)

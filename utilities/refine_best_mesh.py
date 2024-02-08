@@ -32,19 +32,19 @@ plot_graph(initial_env.graph, 3, vertex_desired_degree=initial_env.vertex_desire
 outputfile = os.path.join(input_folder, "coarse.png")
 plot_graph(best_graph, 3, vertex_desired_degree=vertex_desired_degree, filename=outputfile)
 
-refined_graph = refine(best_graph)
+refined_graph = refine(best_graph, 3)
 refined_graph.smooth_vertices()
 outputfile = os.path.join(input_folder, "refine-1.png")
 plot_graph(refined_graph, 3, vertex_desired_degree=vertex_desired_degree, filename=outputfile)
 
-refined_graph = refine(refined_graph)
+refined_graph = refine(refined_graph, 3)
 refined_graph.smooth_vertices()
 outputfile = os.path.join(input_folder, "refine-2.png")
 plot_graph(refined_graph, 3, vertex_desired_degree=vertex_desired_degree, filename=outputfile)
 
 
 
-refined_graph = refine(refined_graph)
+refined_graph = refine(refined_graph, 3)
 refined_graph.smooth_vertices()
 # outputfile = os.path.join(input_folder, "refine-2.png")
 plot_graph(refined_graph, 3, vertex_desired_degree=vertex_desired_degree)

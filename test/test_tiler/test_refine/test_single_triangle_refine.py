@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from src.tiler import Tiler, _refine, triangle_connectivity_representation
+from src.tiler import Tiler, _refine_triangles, triangle_connectivity_representation
 
 
 def initialize_graph():
@@ -29,7 +29,7 @@ class TestRefine(unittest.TestCase):
         edges = representation["edges"]
         econn = representation["edge connectivity"]
 
-        new_coords, new_conn = _refine(coords, edges, vconn, econn)
+        new_coords, new_conn = _refine_triangles(coords, edges, vconn, econn)
 
         test_coords = np.array(
             [

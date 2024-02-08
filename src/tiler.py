@@ -1010,23 +1010,21 @@ def _get_edge_array(tiler: Tiler, vertex2index):
     return np.array(edges), edge2index
 
 
-def triangle_connectivity_representation(tiler: Tiler):
-    assert all(tiler.face_degree(fidx) == 3 for fidx in tiler.face_list())
-
+def _get_connectivity_representation(tiler: Tiler, face_degree):
     num_faces = tiler.number_of_faces()
     coordinates, vertex2index = _get_vertex_array(tiler)
     edges, edge2index = _get_edge_array(tiler, vertex2index)
 
-    connectivity = np.zeros((num_faces, 3), dtype=int)
-    tri2edge = np.zeros((num_faces, 3), dtype=int)
+    connectivity = np.zeros((num_faces, face_degree), dtype=int)
+    face2edge = np.zeros((num_faces, face_degree), dtype=int)
 
-    for tri_idx, fidx in enumerate(tiler.face_list()):
-        hidx = tiler.first_face_halfedge(fidx)
-        for step in range(3):
+    for idx, face_index in enumerate(tiler.face_list()):
+        hidx = tiler.first_face_halfedge(face_index)
+        for step in range(face_degree):
             src = tiler.source_vertex(hidx, tag=False)
             dst = tiler.target_vertex(hidx, tag=False)
-            connectivity[tri_idx, step] = vertex2index[src]
-            tri2edge[tri_idx, step] = edge2index[(src, dst)]
+            connectivity[idx, step] = vertex2index[src]
+            face2edge[idx, step] = edge2index[(src, dst)]
             hidx = tiler.next_half_edge(hidx)
 
     user_vertices = [vertex2index[vidx] for vidx in tiler.user_defined_vertices]
@@ -1035,13 +1033,28 @@ def triangle_connectivity_representation(tiler: Tiler):
         "vertex connectivity": connectivity,
         "coordinates": coordinates,
         "edges": edges,
-        "edge connectivity": tri2edge,
+        "edge connectivity": face2edge,
         "user vertices": user_vertices
     }
     return representation
 
 
-def _refine(vertex_coordinates, edges, vertex_connectivity, edge_connectivity):
+def triangle_connectivity_representation(tiler: Tiler):
+    assert all(tiler.face_degree(fidx) == 3 for fidx in tiler.face_list())
+    return _get_connectivity_representation(tiler, 3)
+
+
+def quad_connectivity_representation(tiler: Tiler):
+    assert all(tiler.face_degree(fidx) == 4 for fidx in tiler.face_list())
+    return _get_connectivity_representation(tiler, 4)
+
+
+def _refine_triangles(vertex_coordinates, edges, vertex_connectivity, edge_connectivity):
+    assert vertex_coordinates.shape[1] == 2
+    assert edges.shape[1] == 2
+    assert vertex_connectivity.shape[1] == 3
+    assert edge_connectivity.shape[1] == 3
+
     # get mid-point of edges
     midpoint_coords = 0.5 * (vertex_coordinates[edges[:, 0]] + vertex_coordinates[edges[:, 1]])
     vertex_offset = vertex_coordinates.shape[0]
@@ -1066,15 +1079,74 @@ def _refine(vertex_coordinates, edges, vertex_connectivity, edge_connectivity):
     return new_coordinates, new_vertex_connectivity
 
 
-def refine(tiler: Tiler):
-    representation = triangle_connectivity_representation(tiler)
+def _refine_quads(vertex_coordinates, edges, vertex_connectivity, edge_connectivity):
+    assert vertex_coordinates.shape[1] == 2
+    assert edges.shape[1] == 2
+    assert vertex_connectivity.shape[1] == 4
+    assert edge_connectivity.shape[1] == 4
+
+    # get mid-point of edges
+    edge_midpoint_coords = 0.5 * (vertex_coordinates[edges[:, 0]] + vertex_coordinates[edges[:, 1]])
+
+    # get face centroids
+    face_centroids = 0.25 * (
+            vertex_coordinates[vertex_connectivity[:, 0]] +
+            vertex_coordinates[vertex_connectivity[:, 1]] +
+            vertex_coordinates[vertex_connectivity[:, 2]] +
+            vertex_coordinates[vertex_connectivity[:, 3]]
+    )
+
+    # edge midpoint vertices and face centroid vertices' indices need to be offset
+    # when we combine all the vertices together
+    edge_vertices_offset = vertex_coordinates.shape[0]
+    face_vertices_offset = vertex_coordinates.shape[0] + edges.shape[0]
+
+    v0 = vertex_connectivity[:, 0]
+    v1 = vertex_connectivity[:, 1]
+    v2 = vertex_connectivity[:, 2]
+    v3 = vertex_connectivity[:, 3]
+
+    v01 = edge_connectivity[:, 0] + edge_vertices_offset
+    v12 = edge_connectivity[:, 1] + edge_vertices_offset
+    v23 = edge_connectivity[:, 2] + edge_vertices_offset
+    v30 = edge_connectivity[:, 3] + edge_vertices_offset
+
+    vf = np.arange(vertex_connectivity.shape[0]) + face_vertices_offset
+
+    block1 = np.column_stack([v0, v01, vf, v30])
+    block2 = np.column_stack([v01, v1, v12, vf])
+    block3 = np.column_stack([vf, v12, v2, v23])
+    block4 = np.column_stack([v30, vf, v23, v3])
+
+    new_vertex_connectivity = np.vstack([block1, block2, block3, block4])
+    new_coordinates = np.vstack(
+        [
+            vertex_coordinates,
+            edge_midpoint_coords,
+            face_centroids
+        ]
+    )
+
+    return new_coordinates, new_vertex_connectivity
+
+
+def refine(tiler: Tiler, face_degree):
+    if face_degree == 3:
+        representation = triangle_connectivity_representation(tiler)
+    elif face_degree == 4:
+        representation = quad_connectivity_representation(tiler)
+    else:
+        raise ValueError("Expected face degree in {3,4} got face degree = ", face_degree)
 
     coords = representation["coordinates"]
     vconn = representation["vertex connectivity"]
     edges = representation["edges"]
     econn = representation["edge connectivity"]
 
-    new_coords, new_conn = _refine(coords, edges, vconn, econn)
+    if face_degree == 3:
+        new_coords, new_conn = _refine_triangles(coords, edges, vconn, econn)
+    elif face_degree == 4:
+        new_coords, new_conn = _refine_quads(coords, edges, vconn, econn)
 
     num_coords = new_coords.shape[0]
     new_coords = dict(zip(range(num_coords), new_coords))
