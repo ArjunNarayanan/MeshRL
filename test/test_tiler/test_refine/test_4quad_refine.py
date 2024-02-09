@@ -1,6 +1,5 @@
 import unittest
 import numpy as np
-from src.render import Renderer
 from src.tiler import Tiler, quad_connectivity_representation, _refine_quads
 
 

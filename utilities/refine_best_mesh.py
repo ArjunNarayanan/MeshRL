@@ -1,6 +1,10 @@
+import argparse
 import os
+import sys
+
+sys.path.append(os.getcwd())
 from src.render import Renderer
-from src.tiler import refine, Tiler
+from src.tiler import refine
 import pickle
 
 
@@ -15,36 +19,47 @@ def plot_graph(graph, face_desired_degree, vertex_desired_degree=None, filename=
         renderer.fig.savefig(filename)
 
 
-filename = "experiments/tiler-random-polygon/triangle/tri-5-50-scaled/best-mesh/rollout-2/best_mesh.pkl"
-with open(filename, "rb") as input_file:
-    data = pickle.load(input_file)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-input", help="path to pickle data file", required=True)
+    parser.add_argument("-faces", required=True, help="Face degree of polygon", type=int)
+    parser.add_argument("-refine", default=3, type=int, help="number of refinement levels")
+    args = parser.parse_args()
 
-input_folder = os.path.dirname(filename)
+    filename = args.input
+    with open(filename, "rb") as input_file:
+        data = pickle.load(input_file)
 
-initial_env = data["initial"]
-best_env = data["best_env"]
-best_graph = best_env.graph
-vertex_desired_degree = best_env.vertex_desired_degree
+    input_folder = os.path.dirname(filename)
 
-outputfile = os.path.join(input_folder, "initial.png")
-plot_graph(initial_env.graph, 3, vertex_desired_degree=initial_env.vertex_desired_degree, filename=outputfile)
+    initial_env = data["initial"]
+    best_env = data["best_env"]
+    best_graph = best_env.graph
+    vertex_desired_degree = best_env.vertex_desired_degree
 
-outputfile = os.path.join(input_folder, "coarse.png")
-plot_graph(best_graph, 3, vertex_desired_degree=vertex_desired_degree, filename=outputfile)
+    outputfile = os.path.join(input_folder, "initial.png")
+    print("\nPLOTTING INITIAL POLYGON : ", outputfile)
+    plot_graph(
+        initial_env.graph,
+        args.faces,
+        vertex_desired_degree=initial_env.vertex_desired_degree,
+        filename=outputfile
+    )
 
-refined_graph = refine(best_graph, 3)
-refined_graph.smooth_vertices()
-outputfile = os.path.join(input_folder, "refine-1.png")
-plot_graph(refined_graph, 3, vertex_desired_degree=vertex_desired_degree, filename=outputfile)
+    outputfile = os.path.join(input_folder, "coarse.png")
+    print("\nPLOTTING COARSE MESH : ", outputfile)
+    plot_graph(best_graph, args.faces, vertex_desired_degree=vertex_desired_degree, filename=outputfile)
 
-refined_graph = refine(refined_graph, 3)
-refined_graph.smooth_vertices()
-outputfile = os.path.join(input_folder, "refine-2.png")
-plot_graph(refined_graph, 3, vertex_desired_degree=vertex_desired_degree, filename=outputfile)
+    refined_graph = best_graph
 
-
-
-refined_graph = refine(refined_graph, 3)
-refined_graph.smooth_vertices()
-# outputfile = os.path.join(input_folder, "refine-2.png")
-plot_graph(refined_graph, 3, vertex_desired_degree=vertex_desired_degree)
+    for refinement_level in range(args.refine):
+        refined_graph = refine(refined_graph, args.faces)
+        refined_graph.smooth_vertices()
+        outputfile = os.path.join(input_folder, "refine-" + str(refinement_level).zfill(2) + ".png")
+        print("\nPLOTTING REFINE MESH : ", outputfile)
+        plot_graph(
+            refined_graph,
+            args.faces,
+            vertex_desired_degree=vertex_desired_degree,
+            filename=outputfile
+        )

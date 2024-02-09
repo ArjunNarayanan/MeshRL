@@ -3,6 +3,7 @@ import itertools
 from collections import deque
 import numpy as np
 import scipy as sp
+import warnings
 
 
 def induced_angle(v1, v2):
@@ -650,7 +651,7 @@ class Tiler(nx.MultiGraph):
 
         return new_vertex_idx
 
-    def insert_vertex(self, hidx, tag=True):
+    def insert_vertex(self, hidx):
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
         assert self.is_half_edge(hidx)
         if self.half_edge_on_boundary(hidx):
@@ -820,6 +821,51 @@ class Tiler(nx.MultiGraph):
         self.associate_previous_next_half_edge(prev_edge, next_twin)
         self.associate_previous_next_half_edge(prev_twin, next_edge)
         self._delete_half_edge(hidx)
+
+    def _finite_quad_global_split_to_boundary(self, hidx, max_steps):
+        hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
+        seen = set()
+        seen.add(hidx)
+
+        current_half_edge = hidx
+        for step in range(max_steps):
+            current_half_edge = self.next_half_edge(self.next_half_edge(current_half_edge))
+            if self.half_edge_on_boundary(current_half_edge):
+                return True
+            current_half_edge = self.twin_half_edge(current_half_edge)
+            if current_half_edge in seen:
+                return False
+            seen.add(current_half_edge)
+
+        return False
+
+    def is_valid_quad_global_split_source(self, hidx, max_steps):
+        if not self.is_half_edge(hidx):
+            return False
+        if not self.half_edge_on_boundary(hidx):
+            return False
+
+        return self._finite_quad_global_split_to_boundary(hidx, max_steps)
+
+    def global_split_to_boundary(self, hidx, max_steps):
+        assert self.is_valid_quad_global_split_source(hidx, max_steps)
+        original_hidx = hidx
+
+        self.insert_vertex(hidx)
+        hidx = self.next_half_edge(hidx)
+
+        num_steps = 0
+        while num_steps < max_steps and not self.is_boundary_half_edge(hidx):
+            next_half_edge = self.next_half_edge(self.next_half_edge(hidx))
+            self.insert_vertex(next_half_edge)
+            self.insert_half_edge(hidx, 2)
+            hidx = self.twin_half_edge(next_half_edge)
+            num_steps += 1
+
+        if not self.is_boundary_half_edge(hidx):
+            message = "Global split from " + str(original_hidx), " terminated in interior at " + str(hidx)
+            warnings.warn(message)
+
 
     def knn_half_edges(self, hidx, k):
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
@@ -1147,6 +1193,8 @@ def refine(tiler: Tiler, face_degree):
         new_coords, new_conn = _refine_triangles(coords, edges, vconn, econn)
     elif face_degree == 4:
         new_coords, new_conn = _refine_quads(coords, edges, vconn, econn)
+    else:
+        raise ValueError("Expected face degree in {3,4} got face degree = ", face_degree)
 
     num_coords = new_coords.shape[0]
     new_coords = dict(zip(range(num_coords), new_coords))
