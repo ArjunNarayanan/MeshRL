@@ -292,6 +292,9 @@ class Tiler(nx.MultiGraph):
     def half_edge_list(self, tag=True):
         return self._node_list_by_type("half_edge", tag)
 
+    def boundary_half_edge_list(self, tag=True):
+        return self._node_list_by_type("boundary", tag)
+
     def halfedge_list(self, tag=True):
         return self.half_edge_list(tag)
 
@@ -866,6 +869,30 @@ class Tiler(nx.MultiGraph):
             message = "Global split from " + str(original_hidx), " terminated in interior at " + str(hidx)
             warnings.warn(message)
 
+    def _get_global_line_half_edges(self, hidx, max_steps):
+        hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
+        half_edges = [hidx]
+
+        def increment_half_edge(hidx):
+            next_half_edge = self.twin_half_edge(
+                self.next_half_edge(
+                    self.next_half_edge(hidx)
+                )
+            )
+            return next_half_edge
+
+        num_steps = 0
+        current_half_edge = increment_half_edge(hidx)
+
+        while num_steps < max_steps and not self.is_boundary_half_edge(current_half_edge):
+            half_edges.append(current_half_edge)
+            current_half_edge = increment_half_edge(current_half_edge)
+            num_steps += 1
+
+        if not self.is_boundary_half_edge(current_half_edge):
+            warnings.warn("Global split failed to terminate from hidx : ", hidx)
+
+        return half_edges
 
     def knn_half_edges(self, hidx, k):
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
@@ -974,11 +1001,11 @@ class Tiler(nx.MultiGraph):
         num_verts = len(index2vertex)
         degrees = num_verts * [1]
         for idx, vidx in enumerate(index2vertex):
-            if self.is_boundary_vertex(vidx):
-                if not self.is_user_defined_vertex(vidx):
+            if not self.is_user_defined_vertex(vidx):
+                if self.is_boundary_vertex(vidx):
                     degrees[idx] = 2
-            else:
-                degrees[idx] = self.vertex_degree(vidx)
+                else:
+                    degrees[idx] = self.vertex_degree(vidx)
 
         return degrees
 
