@@ -73,7 +73,15 @@ class TestHexEnvSteps(unittest.TestCase):
 
 class TestCompositeActions(unittest.TestCase):
     def setUp(self) -> None:
-        self.env = AngleEnv(3, [6], template_size=6, smooth_iterations=0)
+        self.env = AngleEnv(
+            3,
+            [6],
+            face_reward_weight=0.5,
+            angle_reward_weight=0.5,
+            vertex_reward_weight=0,
+            template_size=6,
+            smooth_iterations=0
+        )
         self.env.graph = initialize_graph()
 
         self.env.template_center = (3, self.env.graph.half_edge_tag)

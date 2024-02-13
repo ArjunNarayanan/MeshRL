@@ -14,13 +14,14 @@ class AngleEnv(gym.Env):
             self,
             face_desired_degree,
             polygon_degree_range,
-            template_size=30,
+            template_size=20,
             max_steps_factor=2,
-            num_substeps=5,
+            num_substeps=10,
             logdir=None,
             max_edge_addition_steps=3,
-            face_reward_weight=0.5,
-            angle_reward_weight=0.5,
+            face_reward_weight=1 / 3,
+            angle_reward_weight=1 / 3,
+            vertex_reward_weight=1 / 3,
             use_boundary=False,
             fixed_reset=False,
             smooth_iterations=5,
@@ -50,10 +51,16 @@ class AngleEnv(gym.Env):
         self.face_desired_degree = face_desired_degree
         self.desired_angle = utils.average_face_angle(self.face_desired_degree)
 
-        self.graph = initialize_random_polygon(self.polygon_degree)
+        graph, vertex_desired_degree = initialize_random_polygon_and_desired_degree(
+            self.polygon_degree,
+            self.desired_angle
+        )
+        self.graph = graph
+        self.vertex_desired_degree = vertex_desired_degree
 
         self.face_reward_weight = face_reward_weight
         self.angle_reward_weight = angle_reward_weight
+        self.vertex_reward_weight = vertex_reward_weight
         self._update_scores_on_reset()
 
         self.fixed_reset = fixed_reset
@@ -138,7 +145,7 @@ class AngleEnv(gym.Env):
     @staticmethod
     def _get_feature_rotation_matrix(v1, v2):
         """
-        return a rotation matrix that will make the vector from v1 to v2 to be aligned with the x-axis
+        return a rotation matrix that will align the vector from v1 to v2 with the x-axis
         """
         v = v2 - v1
         theta = np.arctan2(v[1], v[0])
@@ -153,18 +160,29 @@ class AngleEnv(gym.Env):
     def l1_face_score(self):
         score = sum(abs(fdegree - self.face_desired_degree) / self.face_desired_degree for fdegree in
                     self.graph.face_degrees.values())
-        return score / len(self.graph.face_degrees)
+        return score
 
     def _update_face_scores(self):
-        self.average_face_score = self.l1_face_score()
+        self.total_face_score = self.l1_face_score()
+        self.average_face_score = self.total_face_score / len(self.graph.face_degrees)
 
     def l1_angle_score(self):
         score = sum([abs(angle - self.desired_angle) / self.desired_angle for angle in self.half_edge_angles.values()])
-        return score / len(self.half_edge_angles)
+        return score
 
     def _update_angle_scores(self):
         self.half_edge_angles = self.graph.half_edge_angles()
-        self.average_angle_score = self.l1_angle_score()
+        self.total_angle_score = self.l1_angle_score()
+        self.average_angle_score = self.total_angle_score / len(self.half_edge_angles)
+
+    def l1_vertex_score(self):
+        score = sum(abs(self.graph.vertex_degree(v) - self.vertex_desired_degree[v]) for v in
+                    self.vertex_desired_degree.keys())
+        return score
+
+    def _update_vertex_scores(self):
+        self.total_vertex_score = self.l1_vertex_score()
+        self.average_vertex_score = self.total_vertex_score / len(self.vertex_desired_degree)
 
     def is_terminated(self):
         if self.num_steps >= self.max_steps:
@@ -207,13 +225,6 @@ class AngleEnv(gym.Env):
             self.index_to_half_edge = self.graph.knn_half_edges(self.template_center, self.template_size)
 
         self.half_edge_to_index = {half_edge: idx for idx, half_edge in enumerate(self.index_to_half_edge)}
-
-    def _normalize_coordinates_archive(self, coordinates):
-        scale = np.linalg.norm(coordinates[1] - coordinates[0])
-        rot = self._get_feature_rotation_matrix(coordinates[0], coordinates[1])
-        coordinates = (coordinates - coordinates[0]) / scale
-        coordinates = (rot @ coordinates.transpose()).transpose()
-        return coordinates
 
     def _normalize_coordinates(self, coordinates):
         rot = self._get_feature_rotation_matrix(coordinates[0], coordinates[1])
@@ -365,8 +376,12 @@ class AngleEnv(gym.Env):
 
         self._update_face_scores()
         self._update_angle_scores()
+        self._update_vertex_scores()
+
         self.score = self.face_reward_weight * self.average_face_score + \
-                     self.angle_reward_weight * self.average_angle_score
+                     self.angle_reward_weight * self.average_angle_score + \
+                     self.vertex_reward_weight * self.average_vertex_score
+
         self.reward = prev_score - self.score
         self.min_score = min(self.score, self.min_score)
 
@@ -396,14 +411,17 @@ class AngleEnv(gym.Env):
     def _update_scores_on_reset(self):
         self._update_face_scores()
         self._update_angle_scores()
+        self._update_vertex_scores()
 
         self.score = self.face_reward_weight * self.average_face_score + \
-                     self.angle_reward_weight * self.average_angle_score
+                     self.angle_reward_weight * self.average_angle_score + \
+                     self.vertex_reward_weight * self.average_vertex_score
         self.min_score = self.score
 
         self.initial_score = self.score
         self.initial_face_score = self.average_face_score
         self.initial_angle_score = self.average_angle_score
+        self.initial_vertex_score = self.average_vertex_score
 
         self.reward = 0
 
@@ -488,7 +506,13 @@ class AngleEnv(gym.Env):
 
     def _hard_reset(self):
         self.polygon_degree = np.random.choice(self.polygon_degree_range)
-        self.graph = initialize_random_polygon(self.polygon_degree)
+
+        graph, vertex_desired_degree = initialize_random_polygon_and_desired_degree(
+            self.polygon_degree,
+            self.desired_angle
+        )
+        self.graph = graph
+        self.vertex_desired_degree = vertex_desired_degree
 
         self._update_scores_on_reset()
         self.max_steps = int(self.max_steps_factor * self.polygon_degree)
@@ -542,3 +566,17 @@ def initialize_random_polygon(polygon_degree):
     coordinates = dict(zip(node_ids, coordinates))
     graph = Tiler.from_face_loops(face_loop, coordinates)
     return graph
+
+
+def initialize_random_polygon_and_desired_degree(polygon_degree, target_angle):
+    coordinates = utils.generate_coordinates(polygon_degree)
+    node_ids = list(range(polygon_degree))
+    face_loop = [node_ids]
+    coordinates = dict(zip(node_ids, coordinates))
+
+    graph = Tiler.from_face_loops(face_loop, coordinates)
+    interior_angles = utils.get_polygon_interior_angles(face_loop[0], graph.vertex_coordinates)
+    desired_degree = {vidx: utils.rounded_desired_degree(angle, target_angle) for vidx, angle in
+                      interior_angles.items()}
+
+    return graph, desired_degree
