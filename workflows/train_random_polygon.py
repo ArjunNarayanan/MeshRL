@@ -2,7 +2,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import EvalCallback
 import argparse
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 import sys
 import os
 import datetime
@@ -25,11 +25,16 @@ if __name__ == "__main__":
     parser.add_argument("-config", required=True)
     args = parser.parse_args()
 
-    config = load_yaml_config(args.config)
+    num_envs = args.num_envs
+    config_fn = args.config
+    # num_envs = 1
+    # config_fn = "../experiments/angle-env/quad/face-angle-vertex/config.yml"
+
+    config = load_yaml_config(config_fn)
 
     print("TRAIN START TIMESTAMP : ", datetime.datetime.now())
 
-    default_output_dir = os.path.dirname(args.config)
+    default_output_dir = os.path.dirname(config_fn)
     output_dir = config.get("output_dir", default_output_dir)
     make_output_dir_if_necessary(output_dir)
     print("\n\tUSING OUTPUT DIR : ", output_dir, "\n")
@@ -44,7 +49,6 @@ if __name__ == "__main__":
     eval_env_config = env_config.copy()
     eval_env_config["incremental_reward"] = False
 
-    num_envs = args.num_envs
     if num_envs > 1:
         env = make_vec_env(
             lambda: initialize_environment(env_config),
@@ -57,8 +61,16 @@ if __name__ == "__main__":
             vec_env_cls=SubprocVecEnv,
         )
     else:
-        env = initialize_environment()
-        eval_env = initialize_environment(eval_env_config)
+        env = make_vec_env(
+            lambda: initialize_environment(env_config),
+            1,
+            vec_env_cls=DummyVecEnv,
+        )
+        eval_env = make_vec_env(
+            lambda: initialize_environment(eval_env_config),
+            1,
+            vec_env_cls=DummyVecEnv,
+        )
     ###################################################################################################################
 
     ###################################################################################################################

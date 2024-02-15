@@ -442,7 +442,7 @@ class AngleEnv(gym.Env):
 
     def _step_delete_source_vertex(self, hidx):
         if self.graph.is_valid_delete_source_vertex(hidx):
-            source_vertex = self.graph.source_vertex(hidx)
+            source_vertex = self.graph.source_vertex(hidx, tag=False)
             self.graph.delete_source_vertex(hidx)
             self.vertex_desired_degree.pop(source_vertex)
             self._update_scores_on_step()
