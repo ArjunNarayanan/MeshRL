@@ -7,18 +7,19 @@ import glob
 import pickle
 
 sys.path.append(os.getcwd())
-from envs.random_polygon_tiler_env import RandomPolygonEnv
+from envs.environment_maker import initialize_environment
 from src.utils import load_yaml_config, load_model_from_checkpoint
 
 
-def initialize_environment(polygon_degree, max_steps_factor=None):
+def generate_environment(polygon_degree, max_steps_factor=None):
     env_config = config["environment"]
     env_config["min_polygon_degree"] = polygon_degree
     env_config["max_polygon_degree"] = polygon_degree
     env_config["fixed_reset"] = True
     if max_steps_factor is not None:
         env_config["max_steps_factor"] = max_steps_factor
-    env = RandomPolygonEnv.from_config(env_config)
+
+    env = initialize_environment(env_config)
     return env
 
 
@@ -58,15 +59,15 @@ def get_best_mesh_from_rollout(env):
         obs, done = step_environment(env, dist)
         obs = obs_as_tensor(obs)
 
-        if env.face_score == 0 and env.vertex_score < best_score:
+        if env.get_face_score() == 0 and env.score < best_score:
             best_env = deepcopy(env)
-            best_score = env.vertex_score
+            best_score = env.score
 
     return best_env, best_score
 
 
 def get_best_mesh_from_multi_rollout(num_rollouts=10):
-    env = initialize_environment(polygon_degree, max_steps_factor)
+    env = generate_environment(polygon_degree, max_steps_factor)
 
     best_env = None
     best_score = float("inf")
@@ -106,6 +107,7 @@ if __name__ == "__main__":
     parser.add_argument("-output", default="best-mesh")
     parser.add_argument("-steps", help="max step factor", default=3, type=int)
     parser.add_argument("-rollout", default=None)
+    parser.add_argument("-trials", default=10, type=int)
     args = parser.parse_args()
 
     input_folder = args.input
@@ -113,6 +115,7 @@ if __name__ == "__main__":
     config_filename = args.config
     polygon_degree = args.degree
     max_steps_factor = args.steps
+    num_trials = args.trials
 
     print("Generating best mesh for polygon degree : ", polygon_degree)
 
@@ -135,7 +138,7 @@ if __name__ == "__main__":
     model = load_model_from_checkpoint(checkpoint_file, config_file)
     config = load_yaml_config(config_file)
 
-    initial_env, best_env, best_score = get_best_mesh_from_multi_rollout()
+    initial_env, best_env, best_score = get_best_mesh_from_multi_rollout(num_rollouts=num_trials)
 
     output_data = dict(
         initial=initial_env,

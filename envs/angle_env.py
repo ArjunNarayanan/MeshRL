@@ -111,10 +111,10 @@ class AngleEnv(gym.Env):
         num_substeps = config.get("num_substeps", 10)
         max_edge_addition_steps = config.get("max_edge_addition_steps", 3)
         logdir = config.get("logdir", None)
-        
-        face_reward_weight = config.get("face_reward_weight", 1/3)
-        angle_reward_weight = config.get("angle_reward_weight", 1/3)
-        vertex_reward_weight = config.get("vertex_reward_weight", 1/3)
+
+        face_reward_weight = config.get("face_reward_weight", 1 / 3)
+        angle_reward_weight = config.get("angle_reward_weight", 1 / 3)
+        vertex_reward_weight = config.get("vertex_reward_weight", 1 / 3)
 
         use_boundary = config.get("use_boundary", False)
         fixed_reset = config.get("fixed_reset", False)
@@ -173,6 +173,9 @@ class AngleEnv(gym.Env):
     def _update_face_scores(self):
         self.total_face_score = self.global_l1_face_score()
         self.average_face_score = self.total_face_score / len(self.graph.face_degrees)
+
+    def get_face_score(self):
+        return self.total_face_score
 
     def global_l1_angle_score(self):
         score = sum(abs(angle - self.desired_angle) / self.desired_angle for angle in self.half_edge_angles.values())
