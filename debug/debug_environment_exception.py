@@ -17,7 +17,7 @@ if __name__ == "__main__":
     env = AngleEnv(3, [5])
     env.graph = graph
     env._update_scores_on_reset()
-    env.template_center = env._select_half_edge_template_center(env.graph.half_edge_list())
+    env._set_half_edge_template_center(env.graph.half_edge_list())
     env._build_template()
 
     actions = data["actions"]
