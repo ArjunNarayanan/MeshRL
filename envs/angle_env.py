@@ -107,8 +107,11 @@ class AngleEnv(gym.Env):
         num_substeps = config.get("num_substeps", 10)
         max_edge_addition_steps = config.get("max_edge_addition_steps", 3)
         logdir = config.get("logdir", None)
-        face_reward_weight = config.get("face_reward_weight", 0.5)
-        angle_reward_weight = config.get("angle_reward_weight", 0.5)
+        
+        face_reward_weight = config.get("face_reward_weight", 1/3)
+        angle_reward_weight = config.get("angle_reward_weight", 1/3)
+        vertex_reward_weight = config.get("vertex_reward_weight", 1/3)
+
         use_boundary = config.get("use_boundary", False)
         fixed_reset = config.get("fixed_reset", False)
         smooth_iterations = config.get("smooth_iterations", 5)
@@ -123,6 +126,7 @@ class AngleEnv(gym.Env):
             max_edge_addition_steps=max_edge_addition_steps,
             face_reward_weight=face_reward_weight,
             angle_reward_weight=angle_reward_weight,
+            vertex_reward_weight=vertex_reward_weight,
             use_boundary=use_boundary,
             fixed_reset=fixed_reset,
             smooth_iterations=smooth_iterations
