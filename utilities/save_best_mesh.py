@@ -59,7 +59,7 @@ def get_best_mesh_from_rollout(env):
         obs, done = step_environment(env, dist)
         obs = obs_as_tensor(obs)
 
-        if env.get_face_score() == 0 and env.score < best_score:
+        if env.get_total_face_score() == 0 and env.score < best_score:
             best_env = deepcopy(env)
             best_score = env.score
 

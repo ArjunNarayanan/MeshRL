@@ -63,6 +63,10 @@ class AngleEnv(gym.Env):
         self.face_reward_weight = face_reward_weight
         self.angle_reward_weight = angle_reward_weight
         self.vertex_reward_weight = vertex_reward_weight
+
+        self.use_boundary = use_boundary
+        self._set_half_edge_template_center(self.graph.half_edge_list())
+        self._build_template()
         self._update_scores_on_reset()
 
         self.fixed_reset = fixed_reset
@@ -72,13 +76,8 @@ class AngleEnv(gym.Env):
         # Attributes for excpetion handling
         self.initial_graph = deepcopy(self.graph)
         self.initial_vertex_desired_degree = self.vertex_desired_degree.copy()
-
         self.exception_count = 0
         self.action_sequence = []
-
-        self.use_boundary = use_boundary
-        self._set_half_edge_template_center(self.graph.half_edge_list())
-        self._build_template()
 
         self.template_boundary_index = -2
         self.geometric_boundary_index = -1
@@ -165,44 +164,48 @@ class AngleEnv(gym.Env):
         ])
         return matrix
 
-    def global_l1_face_score(self):
-        score = sum(abs(fdegree - self.face_desired_degree) / self.face_desired_degree for fdegree in
-                    self.graph.face_degrees.values())
+    def template_l1_face_score(self):
+        score = sum(abs(self.graph.face_degree(fidx) - self.face_desired_degree) for fidx in self.unique_template_faces)
         return score
 
-    def _update_face_scores(self):
-        self.total_face_score = self.global_l1_face_score()
-        self.average_face_score = self.total_face_score / len(self.graph.face_degrees)
+    def _update_template_face_scores(self):
+        self.template_face_score = self.template_l1_face_score()
 
-    def get_face_score(self):
-        return self.total_face_score
-
-    def global_l1_angle_score(self):
-        score = sum(abs(angle - self.desired_angle) / self.desired_angle for angle in self.half_edge_angles.values())
+    def get_total_face_score(self):
+        score = sum(abs(self.graph.face_degree(fidx) - self.face_desired_degree) for fidx in self.graph.face_list())
         return score
 
-    def _update_angle_scores(self):
-        self.half_edge_angles = self.graph.half_edge_angles()
-        self.total_angle_score = self.global_l1_angle_score()
-        self.average_angle_score = self.total_angle_score / len(self.half_edge_angles)
-
-    def global_l1_vertex_score(self):
-        vertices = self.graph.vertex_list(tag=False)
-        score = sum(abs(self.vertex_desired_degree[v] - self.graph.vertex_degree(v)) for v in vertices)
+    def template_l1_angle_score(self):
+        score = sum(
+            abs(self.half_edge_angles[hidx] - self.desired_angle) / self.desired_angle for hidx
+            in self.half_edge_to_index
+        )
         return score
 
-    def _update_vertex_scores(self):
-        self.total_vertex_score = self.global_l1_vertex_score()
-        self.average_vertex_score = self.total_vertex_score / len(self.vertex_desired_degree)
+    def _update_template_angle_scores(self):
+        self.template_angle_score = self.template_l1_angle_score()
+
+    def template_l1_vertex_score(self):
+        score = sum(
+            abs(self.graph.vertex_degree(vidx) - self.vertex_desired_degree[vidx]) for vidx in
+            self.unique_template_vertices
+        )
+        return score
+
+    def _update_template_vertex_scores(self):
+        self.template_vertex_score = self.template_l1_vertex_score()
 
     def is_terminated(self):
-        if self.num_steps >= self.max_steps:
+        if self.exception_occurred:
             return True
 
         if self.score == 0:
             return True
 
-        if self.exception_occurred:
+        if self.num_steps % self.num_substeps == 0:
+            return True
+
+        if self.num_steps >= self.max_steps:
             return True
 
         return False
@@ -215,14 +218,14 @@ class AngleEnv(gym.Env):
     def _half_edge_face_score(self, hidx):
         fidx = self.graph.face(hidx)
         fdegree = self.graph.face_degree(fidx)
-        score = abs(fdegree - self.face_desired_degree) / self.face_desired_degree
+        score = abs(fdegree - self.face_desired_degree)
         return score
 
     def _half_edge_vertex_score(self, hidx):
         vidx = self.graph.source_vertex(hidx, tag=False)
         vdegree = self.graph.vertex_degree(vidx)
         vdesired = self.vertex_desired_degree[vidx]
-        score = abs(vdesired - vdegree) / vdesired
+        score = abs(vdesired - vdegree)
         return score
 
     def _half_edge_score(self, hidx):
@@ -242,10 +245,18 @@ class AngleEnv(gym.Env):
         self.template_center = half_edges[template_center_idx]
 
     def _build_template(self):
+        self.half_edge_angles = self.graph.half_edge_angles()
+
         if self.use_boundary:
             self.index_to_half_edge = self.graph.knn_half_edges_with_boundary(self.template_center, self.template_size)
         else:
             self.index_to_half_edge = self.graph.knn_half_edges(self.template_center, self.template_size)
+
+        self.template_faces = [self.graph.face(hidx) for hidx in self.index_to_half_edge]
+        self.unique_template_faces = set(self.template_faces)
+
+        self.template_vertices = [self.graph.source_vertex(hidx, tag=False) for hidx in self.index_to_half_edge]
+        self.unique_template_vertices = set(self.template_vertices)
 
         self.half_edge_to_index = {half_edge: idx for idx, half_edge in enumerate(self.index_to_half_edge)}
 
@@ -263,8 +274,8 @@ class AngleEnv(gym.Env):
         return coordinates
 
     def _get_feature_matrix(self):
-        source_vertices = [self.graph.source_vertex(hidx, tag=False) for hidx in self.index_to_half_edge]
-        faces = [self.graph.face(hidx) for hidx in self.index_to_half_edge]
+        source_vertices = self.template_vertices
+        faces = self.template_faces
 
         coordinate_features = self._get_coordinate_features(source_vertices)
         vertex_desired_degree = [self.vertex_desired_degree[vidx] for vidx in source_vertices]
@@ -404,26 +415,9 @@ class AngleEnv(gym.Env):
             }
             return obs
 
-    def _update_scores_on_step(self):
-        prev_score = self.score
-        self.graph.smooth_vertices(num_iter=self.smooth_iterations)
-
-        self._update_face_scores()
-        self._update_angle_scores()
-        self._update_vertex_scores()
-
-        self.score = self.face_reward_weight * self.average_face_score + \
-                     self.angle_reward_weight * self.average_angle_score + \
-                     self.vertex_reward_weight * self.average_vertex_score
-
-        self.reward = prev_score - self.score
-        self.min_score = min(self.score, self.min_score)
-
     def _step_insert_edge(self, hidx, num_steps):
         if self.graph.is_valid_edge_insert(hidx, num_steps):
             self.graph.insert_half_edge(hidx, num_steps)
-            self._update_scores_on_step()
-        return
 
     def _step_insert_vertex(self, hidx):
         if self.graph.is_half_edge(hidx):
@@ -434,38 +428,15 @@ class AngleEnv(gym.Env):
             else:
                 self.vertex_desired_degree[new_vertex_idx] = self.interior_vertex_desired_degree
 
-            self._update_scores_on_step()
-        return
-
     def _step_delete_edge(self, hidx):
         if self.graph.is_valid_delete_half_edge(hidx):
             self.graph.delete_half_edge(hidx)
-            self._update_scores_on_step()
-        return
 
     def _step_delete_source_vertex(self, hidx):
         if self.graph.is_valid_delete_source_vertex(hidx):
             source_vertex = self.graph.source_vertex(hidx, tag=False)
             self.graph.delete_source_vertex(hidx)
             self.vertex_desired_degree.pop(source_vertex)
-            self._update_scores_on_step()
-
-    def _update_scores_on_reset(self):
-        self._update_face_scores()
-        self._update_angle_scores()
-        self._update_vertex_scores()
-
-        self.score = self.face_reward_weight * self.average_face_score + \
-                     self.angle_reward_weight * self.average_angle_score + \
-                     self.vertex_reward_weight * self.average_vertex_score
-        self.min_score = self.score
-
-        self.initial_score = self.score
-        self.initial_face_score = self.average_face_score
-        self.initial_angle_score = self.average_angle_score
-        self.initial_vertex_score = self.average_vertex_score
-
-        self.reward = 0
 
     def _step_half_edge_action(self, half_edge, action):
         assert 0 <= action < self.num_actions_per_half_edge
@@ -514,8 +485,9 @@ class AngleEnv(gym.Env):
             self.num_steps += 1
 
             # update the template center after step
-            self._update_half_edge_template_center()
+            self._local_reset_template_center()
             self._build_template()
+            self._update_scores_on_step()
 
             self.terminated = self.is_terminated()
             observation = self._get_obs()
@@ -546,7 +518,39 @@ class AngleEnv(gym.Env):
 
         print("\n\n\tLOGGED EXCEPTED ENV TO : ", exception_filepath, "\n\n\t")
 
-    def _hard_reset(self):
+    def _update_scores_on_step(self):
+        prev_score = self.score
+        self.graph.smooth_vertices(num_iter=self.smooth_iterations)
+
+        self._update_template_face_scores()
+        self._update_template_angle_scores()
+        self._update_template_vertex_scores()
+
+        self.score = self.face_reward_weight * self.template_face_score + \
+                     self.angle_reward_weight * self.template_angle_score + \
+                     self.vertex_reward_weight * self.template_vertex_score
+
+        self.reward = prev_score - self.score
+        self.min_score = min(self.score, self.min_score)
+
+    def _update_scores_on_reset(self):
+        self._update_template_face_scores()
+        self._update_template_angle_scores()
+        self._update_template_vertex_scores()
+
+        self.score = self.face_reward_weight * self.template_face_score + \
+                     self.angle_reward_weight * self.template_angle_score + \
+                     self.vertex_reward_weight * self.template_vertex_score
+        self.min_score = self.score
+
+        self.initial_score = self.score
+        self.initial_face_score = self.template_face_score
+        self.initial_angle_score = self.template_angle_score
+        self.initial_vertex_score = self.template_vertex_score
+
+        self.reward = 0
+
+    def _hard_reset_to_new_state(self):
         self.polygon_degree = np.random.choice(self.polygon_degree_range)
 
         graph, vertex_desired_degree = initialize_random_polygon_and_desired_degree(
@@ -556,7 +560,6 @@ class AngleEnv(gym.Env):
         self.graph = graph
         self.vertex_desired_degree = vertex_desired_degree
 
-        self._update_scores_on_reset()
         self.max_steps = int(self.max_steps_factor * self.polygon_degree)
         self.num_steps = 0
         self.terminated = self.is_terminated()
@@ -567,12 +570,13 @@ class AngleEnv(gym.Env):
 
         self._set_half_edge_template_center(self.graph.half_edge_list())
         self._build_template()
+        self._update_scores_on_reset()
 
         obs = self._get_obs()
 
         return obs, {"score": self.score}
 
-    def _reset_to_initial_state(self):
+    def _hard_reset_to_initial_state(self):
         self.graph = deepcopy(self.initial_graph)
         self.vertex_desired_degree = self.initial_vertex_desired_degree.copy()
 
@@ -589,11 +593,28 @@ class AngleEnv(gym.Env):
         obs = self._get_obs()
         return obs, {"score": self.score}
 
-    def reset(self, seed=None, options=None):
+    def hard_reset(self):
         if self.fixed_reset:
-            return self._reset_to_initial_state()
+            return self._hard_reset_to_initial_state()
         else:
-            return self._hard_reset()
+            return self._hard_reset_to_new_state()
+
+    def soft_reset(self):
+        self._set_half_edge_template_center(self.graph.half_edge_list())
+        self._build_template()
+        self._update_scores_on_reset()
+
+        obs = self._get_obs()
+        return obs, {"score": self.score}
+
+    def reset(self, seed=None, options=None):
+        if self.exception_occurred:
+            return self.hard_reset()
+
+        if self.num_steps >= self.max_steps:
+            return self.hard_reset()
+
+        return self.soft_reset()
 
 
 #######################################################################################################################
