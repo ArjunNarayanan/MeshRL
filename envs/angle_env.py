@@ -65,6 +65,7 @@ class AngleEnv(gym.Env):
         self.vertex_reward_weight = vertex_reward_weight
 
         self.use_boundary = use_boundary
+        self._update_half_edge_angles()
         self._set_half_edge_template_center(self.graph.half_edge_list())
         self._build_template()
         self._update_scores_on_reset()
@@ -164,6 +165,9 @@ class AngleEnv(gym.Env):
         ])
         return matrix
 
+    def _update_half_edge_angles(self):
+        self.half_edge_angles = self.graph.half_edge_angles()
+
     def template_l1_face_score(self):
         score = sum(abs(self.graph.face_degree(fidx) - self.face_desired_degree) for fidx in self.unique_template_faces)
         return score
@@ -245,8 +249,6 @@ class AngleEnv(gym.Env):
         self.template_center = half_edges[template_center_idx]
 
     def _build_template(self):
-        self.half_edge_angles = self.graph.half_edge_angles()
-
         if self.use_boundary:
             self.index_to_half_edge = self.graph.knn_half_edges_with_boundary(self.template_center, self.template_size)
         else:
@@ -458,17 +460,6 @@ class AngleEnv(gym.Env):
                 self.template_center = hidx
                 break
 
-    def _global_reset_template_center(self):
-        self._set_half_edge_template_center(self.graph.half_edge_list())
-
-    def _update_half_edge_template_center(self):
-        if self.num_steps % self.num_substeps == 0:
-            self._global_reset_template_center()
-        else:
-            self._local_reset_template_center()
-            if self.template_center is None:
-                self._global_reset_template_center()
-
     def _get_reward(self):
         return self.reward
 
@@ -486,6 +477,7 @@ class AngleEnv(gym.Env):
 
             # update the template center after step
             self._local_reset_template_center()
+            self._update_half_edge_angles()
             self._build_template()
             self._update_scores_on_step()
 
@@ -568,6 +560,7 @@ class AngleEnv(gym.Env):
         self.action_sequence = []
         self.exception_occurred = False
 
+        self._update_half_edge_angles()
         self._set_half_edge_template_center(self.graph.half_edge_list())
         self._build_template()
         self._update_scores_on_reset()
@@ -580,10 +573,11 @@ class AngleEnv(gym.Env):
         self.graph = deepcopy(self.initial_graph)
         self.vertex_desired_degree = self.initial_vertex_desired_degree.copy()
 
+        self._update_half_edge_angles()
         self._set_half_edge_template_center(self.graph.half_edge_list())
         self._build_template()
-
         self._update_scores_on_reset()
+
         self.num_steps = 0
         self.terminated = self.is_terminated()
 
@@ -600,6 +594,7 @@ class AngleEnv(gym.Env):
             return self._hard_reset_to_new_state()
 
     def soft_reset(self):
+        self._update_half_edge_angles()
         self._set_half_edge_template_center(self.graph.half_edge_list())
         self._build_template()
         self._update_scores_on_reset()
