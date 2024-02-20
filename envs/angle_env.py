@@ -203,8 +203,8 @@ class AngleEnv(gym.Env):
         if self.exception_occurred:
             return True
 
-        if self.score == 0:
-            return True
+        # if self.score == 0:
+        #     return True
 
         if self.num_steps % self.num_substeps == 0:
             return True
@@ -477,7 +477,6 @@ class AngleEnv(gym.Env):
 
             # update the template center after step
             self._local_reset_template_center()
-            self._update_half_edge_angles()
             self._build_template()
             self._update_scores_on_step()
 
@@ -514,6 +513,7 @@ class AngleEnv(gym.Env):
         prev_score = self.score
         self.graph.smooth_vertices(num_iter=self.smooth_iterations)
 
+        self._update_half_edge_angles()
         self._update_template_face_scores()
         self._update_template_angle_scores()
         self._update_template_vertex_scores()
@@ -542,16 +542,17 @@ class AngleEnv(gym.Env):
 
         self.reward = 0
 
-    def _hard_reset_to_new_state(self):
-        self.polygon_degree = np.random.choice(self.polygon_degree_range)
-
-        graph, vertex_desired_degree = initialize_random_polygon_and_desired_degree(
-            self.polygon_degree,
-            self.desired_angle
-        )
+    def _reset_to_state(self, graph: Tiler, vertex_desired_degree):
         self.graph = graph
         self.vertex_desired_degree = vertex_desired_degree
 
+        self._update_half_edge_angles()
+        self._set_half_edge_template_center(self.graph.half_edge_list())
+        self._build_template()
+        self._update_scores_on_reset()
+
+        num_half_edges = self.graph.number_of_half_edges()
+        self.polygon_degree = num_half_edges
         self.max_steps = int(self.max_steps_factor * self.polygon_degree)
         self.num_steps = 0
         self.terminated = self.is_terminated()
@@ -560,14 +561,18 @@ class AngleEnv(gym.Env):
         self.action_sequence = []
         self.exception_occurred = False
 
-        self._update_half_edge_angles()
-        self._set_half_edge_template_center(self.graph.half_edge_list())
-        self._build_template()
-        self._update_scores_on_reset()
-
         obs = self._get_obs()
 
         return obs, {"score": self.score}
+
+    def _hard_reset_to_new_state(self):
+        self.polygon_degree = np.random.choice(self.polygon_degree_range)
+
+        graph, vertex_desired_degree = initialize_random_polygon_and_desired_degree(
+            self.polygon_degree,
+            self.desired_angle
+        )
+        return self._reset_to_state(graph, vertex_desired_degree)
 
     def _hard_reset_to_initial_state(self):
         self.graph = deepcopy(self.initial_graph)
