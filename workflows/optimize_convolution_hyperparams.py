@@ -13,7 +13,7 @@ import sys
 import datetime
 
 sys.path.append(os.getcwd())
-from envs.random_polygon_tiler_env import initialize_environment, RandomPolygonEnv
+from envs.environment_maker import initialize_environment, get_env_feature_size
 from src.convolution_feature_extractor import ConvolutionFeatureExtractor as FeatureExtractor
 from src.policy import CustomActorCriticPolicy
 from src.utils import load_yaml_config
@@ -40,7 +40,7 @@ def sample_ppo_params(trial: optuna.Trial):
     policy_kwargs = dict(
         features_extractor_class=FeatureExtractor,
         features_extractor_kwargs=dict(
-            input_features=RandomPolygonEnv.get_feature_size(),
+            input_features=get_env_feature_size(env_config),
             output_features=feature_extractor_size,
             number_of_layers=feature_extractor_layers
         ),
@@ -126,7 +126,7 @@ class Objective:
         model = PPO(**kwargs)
 
         eval_env = make_vec_env(
-            lambda: initialize_environment(env_config, eval=True),
+            lambda: initialize_environment(env_config),
             NUM_ENVS
         )
 
