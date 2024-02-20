@@ -127,6 +127,7 @@ if __name__ == "__main__":
         env_config["max_polygon_degree"] = polygon_degree
 
     env = initialize_environment(env_config)
+    env.set_eval_mode(True)
     max_steps = env.max_steps
     NUM_DIGITS = int(math.log10(max_steps))
 
