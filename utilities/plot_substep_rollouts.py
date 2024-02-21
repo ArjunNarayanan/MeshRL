@@ -62,12 +62,15 @@ def plot_rollout(rollout, plot_vertex_scores=False):
     output_file = os.path.join(fig_output_folder, figname)
     plot_env(env, filename=output_file, plot_vertex_scores=plot_vertex_scores)
     obs = obs_as_tensor(env._get_obs())
-    done = env.is_terminated()
 
-    while not done:
+    while env.num_steps < env.max_steps:
         step += 1
         dist = get_action_distribution(obs)
         obs, done = step_environment(env, dist)
+
+        if done:
+            env.soft_reset()
+
         obs = obs_as_tensor(obs)
 
         env.graph.smooth_vertices(num_iter=smooth_iterations)
@@ -77,9 +80,6 @@ def plot_rollout(rollout, plot_vertex_scores=False):
 
         plot_env(env, filename=output_file, plot_vertex_scores=plot_vertex_scores)
         print("Saving figure : ", output_file)
-
-    total_reward = abs(env.initial_score - env.score) / env.initial_score
-    print("\nNORMALIZED RETURN : ", total_reward, "\n")
 
 
 def get_next_rollout_index():

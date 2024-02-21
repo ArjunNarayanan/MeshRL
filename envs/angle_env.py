@@ -25,13 +25,11 @@ class AngleEnv(gym.Env):
             use_boundary=False,
             fixed_reset=False,
             smooth_iterations=5,
-            eval=False
     ):
         super().__init__()
         self.polygon_degree_range = polygon_degree_range
         self.polygon_degree = np.random.choice(self.polygon_degree_range)
         self.template_size = template_size
-        self.eval = eval
 
         self.max_steps_factor = max_steps_factor
         self.max_steps = int(self.max_steps_factor * self.polygon_degree)
@@ -167,9 +165,6 @@ class AngleEnv(gym.Env):
         ])
         return matrix
 
-    def set_eval_mode(self, eval: bool):
-        self.eval = eval
-
     def _update_half_edge_angles(self):
         self.half_edge_angles = self.graph.half_edge_angles()
 
@@ -204,13 +199,7 @@ class AngleEnv(gym.Env):
     def _update_template_vertex_scores(self):
         self.template_vertex_score = self.template_l1_vertex_score()
 
-    def _is_terminated_eval(self):
-        if self.num_steps >= self.max_steps:
-            return True
-        else:
-            return False
-
-    def _is_terminated_train(self):
+    def is_terminated(self):
         if self.exception_occurred:
             return True
 
@@ -221,12 +210,6 @@ class AngleEnv(gym.Env):
             return True
 
         return False
-
-    def is_terminated(self):
-        if self.eval:
-            return self._is_terminated_eval()
-        else:
-            return self._is_terminated_train()
 
     def _half_edge_angle_score(self, hidx):
         angle = self.half_edge_angles[hidx]
