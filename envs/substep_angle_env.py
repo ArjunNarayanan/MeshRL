@@ -382,7 +382,7 @@ class AngleEnv(gym.Env):
         return action_mask
 
     def _get_progress(self):
-        return np.array([self.num_steps / self.max_steps], dtype=np.float32)
+        return np.array([(self.num_steps % self.num_substeps) / self.num_substeps], dtype=np.float32)
 
     def _get_blank_obs(self):
         features = np.zeros((self.template_size, self.num_features), dtype=np.float32)

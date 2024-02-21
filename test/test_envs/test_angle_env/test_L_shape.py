@@ -1,4 +1,4 @@
-from envs.angle_env import AngleEnv
+from envs.substep_angle_env import AngleEnv
 import unittest
 from src.tiler import Tiler
 
