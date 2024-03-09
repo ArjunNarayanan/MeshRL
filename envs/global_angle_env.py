@@ -13,7 +13,7 @@ class AngleEnv(gym.Env):
     def __init__(
             self,
             face_desired_degree,
-            polygon_degree_range,
+            graph_initializer,
             template_size=20,
             max_steps_factor=2,
             logdir=None,
@@ -22,23 +22,19 @@ class AngleEnv(gym.Env):
             angle_reward_weight=1 / 3,
             vertex_reward_weight=1 / 3,
             use_boundary=False,
-            fixed_reset=False,
             smooth_iterations=5,
     ):
         super().__init__()
-        self.polygon_degree_range = polygon_degree_range
-        self.polygon_degree = np.random.choice(self.polygon_degree_range)
-        self.template_size = template_size
+        self.graph_initializer = graph_initializer
 
+        self.template_size = template_size
         self.max_steps_factor = max_steps_factor
-        self.max_steps = int(self.max_steps_factor * self.polygon_degree)
+
         self.num_steps = 0
         self.smooth_iterations = smooth_iterations
 
         if logdir is None:
             logdir = os.path.join(os.getcwd(), "experiments")
-        if not os.path.isdir(logdir):
-            os.makedirs(logdir)
         self.logdir = logdir
 
         self.max_edge_addition_steps = max_edge_addition_steps
@@ -51,12 +47,11 @@ class AngleEnv(gym.Env):
         self.interior_vertex_desired_degree = utils.rounded_desired_degree(360, self.desired_angle) - 1
         self.boundary_vertex_desired_degree = utils.rounded_desired_degree(180, self.desired_angle)
 
-        graph, vertex_desired_degree = initialize_random_polygon_and_desired_degree(
-            self.polygon_degree,
-            self.desired_angle
-        )
+        graph, vertex_desired_degree = self.graph_initializer()
+
         self.graph = graph
         self.vertex_desired_degree = vertex_desired_degree
+        self.max_steps = int(self.max_steps_factor * self.graph.number_of_half_edges())
 
         self.face_reward_weight = face_reward_weight
         self.angle_reward_weight = angle_reward_weight
@@ -68,7 +63,6 @@ class AngleEnv(gym.Env):
         self._build_template()
         self._update_scores_on_reset()
 
-        self.fixed_reset = fixed_reset
         self.exception_occurred = False
         self.terminated = self.is_terminated()
 
@@ -514,6 +508,9 @@ class AngleEnv(gym.Env):
         return observation, reward, self.terminated, False, {"score": self.score}
 
     def _log_exception(self):
+        if not os.path.isdir(self.logdir):
+            os.makedirs(self.logdir)
+
         exception_filename = str(uuid.uuid4()) + ".pkl"
         self.exception_count += 1
         exception_filepath = os.path.join(self.logdir, exception_filename)
@@ -549,41 +546,9 @@ class AngleEnv(gym.Env):
 
         return obs, {"score": self.score}
 
-    def _reset_to_new_random_state(self):
-        self.polygon_degree = np.random.choice(self.polygon_degree_range)
-
-        graph, vertex_desired_degree = initialize_random_polygon_and_desired_degree(
-            self.polygon_degree,
-            self.desired_angle
-        )
-        return self._reset_to_state(graph, vertex_desired_degree)
-
-    def _reset_to_initial_state(self):
-        graph = deepcopy(self.initial_graph)
-        vertex_desired_degree = self.initial_vertex_desired_degree.copy()
-
-        return self._reset_to_state(graph, vertex_desired_degree)
-
     def reset(self, seed=None, options=None):
-        if self.fixed_reset:
-            return self._reset_to_initial_state()
-        else:
-            return self._reset_to_new_random_state()
-
+        graph, vertex_desired_degree = self.graph_initializer()
+        return self._reset_to_state(graph, vertex_desired_degree)
 
 #######################################################################################################################
 #######################################################################################################################
-
-
-def initialize_random_polygon_and_desired_degree(polygon_degree, target_angle):
-    coordinates = utils.generate_coordinates(polygon_degree)
-    node_ids = list(range(polygon_degree))
-    face_loop = [node_ids]
-    coordinates = dict(zip(node_ids, coordinates))
-
-    graph = Tiler.from_face_loops(face_loop, coordinates)
-    interior_angles = utils.get_polygon_interior_angles(face_loop[0], graph.vertex_coordinates)
-    desired_degree = {vidx: utils.rounded_desired_degree(angle, target_angle) for vidx, angle in
-                      interior_angles.items()}
-
-    return graph, desired_degree

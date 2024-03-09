@@ -1,8 +1,9 @@
 from envs.substep_angle_env import AngleEnv
 import unittest
 from src.tiler import Tiler
+from envs.environment_initializers import LEnv
 
-
+"""
 def initialize_graph_and_desired_degree():
     coords = generate_coordinates()
     loop = [
@@ -25,14 +26,14 @@ def generate_coordinates():
     ]
     coords = dict(zip(range(6), coords))
     return coords
+"""
 
 
 class TestLEnv(unittest.TestCase):
     def setUp(self) -> None:
-        env = AngleEnv(4, [6])
-        graph, desired_degree = initialize_graph_and_desired_degree()
-        env._reset_to_state(graph, desired_degree)
-        env.template_center = (0, graph.half_edge_tag)
+        self.initializer = LEnv()
+        env = AngleEnv(4, self.initializer)
+        env.template_center = (0, env.graph.half_edge_tag)
         env._build_template()
 
         self.env = env

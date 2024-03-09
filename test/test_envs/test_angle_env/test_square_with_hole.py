@@ -1,40 +1,13 @@
 from envs.substep_angle_env import AngleEnv
 import unittest
-from src.tiler import Tiler
-
-
-def initialize_graph_and_desired_degree():
-    coords = generate_coordinates()
-    loop = [
-        [0, 1, 2, 3, 0, 4, 7, 6, 5, 4]
-    ]
-    graph = Tiler.from_face_loops(loop, coords)
-    desired_degree = dict(zip(range(8), [2, 2, 2, 2, 4, 4, 4, 4]))
-
-    return graph, desired_degree
-
-
-def generate_coordinates():
-    coords = [
-        [0, 0],
-        [1, 0],
-        [1, 1],
-        [0, 1],
-        [0.25, 0.25],
-        [0.75, 0.25],
-        [0.75, 0.75],
-        [0.25, 0.75]
-    ]
-    coords = dict(zip(range(len(coords)), coords))
-    return coords
+from envs.environment_initializers import SquareHole
 
 
 class TestSquareHoleEnv(unittest.TestCase):
     def setUp(self) -> None:
-        env = AngleEnv(4, [9])
-        graph, desired_degree = initialize_graph_and_desired_degree()
-        env._reset_to_state(graph, desired_degree)
-        env.template_center = (0, graph.half_edge_tag)
+        initializer = SquareHole()
+        env = AngleEnv(4, initializer)
+        env.template_center = (0, env.graph.half_edge_tag)
         env._build_template()
 
         self.env = env

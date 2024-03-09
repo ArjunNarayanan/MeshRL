@@ -68,7 +68,7 @@ class Tiler(nx.MultiGraph):
             assert all(
                 v in vertex_coordinates for v in vertex_ids), "Some vertices were not found in vertex_coordinates"
             for k, v in vertex_coordinates.items():
-                vertex_coordinates[k] = np.array(v)
+                vertex_coordinates[k] = np.array(v, dtype=float)
 
         graph.vertex_coordinates = vertex_coordinates
 
