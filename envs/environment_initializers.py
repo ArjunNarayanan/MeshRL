@@ -19,11 +19,18 @@ class LEnv:
 
     def __call__(self):
         coords = self.generate_coordinates()
-        loop = [
-            [0, 1, 2, 3, 4, 5]
-        ]
+        loop = [0, 1, 2, 3, 4, 5]
+        desired_degree = [2, 2, 2, 4, 2, 2]
+        pos2id = list(range(6))
+        np.random.shuffle(pos2id)
+
+        loop = [[loop[pos2id[id]] for id in range(6)]]
+        coords = {pos2id[id]: coords[pos2id[id]] for id in range(6)}
+        desired_degree = [desired_degree[pos2id[id]] for id in range(6)]
+        
+        desired_degree = dict(zip(range(6), desired_degree))
+
         graph = Tiler.from_face_loops(loop, coords)
-        desired_degree = dict(zip(range(6), [2, 2, 2, 4, 2, 2]))
         return graph, desired_degree
 
 
