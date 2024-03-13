@@ -122,7 +122,6 @@ class AngleEnv(gym.Env):
             angle_reward_weight=angle_reward_weight,
             vertex_reward_weight=vertex_reward_weight,
             use_boundary=use_boundary,
-            fixed_reset=fixed_reset,
             smooth_iterations=smooth_iterations
         )
 
