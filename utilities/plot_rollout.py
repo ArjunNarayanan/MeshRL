@@ -6,7 +6,7 @@ import math
 import glob
 
 sys.path.append(os.getcwd())
-from envs.environment_maker import initialize_environment, get_env_feature_size
+from envs.environment_maker import initialize_environment
 from src.render import Renderer
 from src.utils import load_yaml_config, load_model_from_checkpoint
 
@@ -96,13 +96,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-input", required=True)
     parser.add_argument("-rollout", default=None)
-    parser.add_argument("-degree", default=None, type=int)
+    # parser.add_argument("-degree", default=None, type=int)
     parser.add_argument("-scores", default=False, type=bool)
     parser.add_argument("-smooth", default=0, type=int)
 
     args = parser.parse_args()
     input_folder = args.input
-    polygon_degree = args.degree
+    # polygon_degree = args.degree
     plot_vertex_scores = args.scores
     smooth_iterations = args.smooth
 
@@ -122,9 +122,9 @@ if __name__ == "__main__":
     model = load_model_from_checkpoint(checkpoint, config_fn)
 
     env_config = config["environment"]
-    if polygon_degree is not None:
-        env_config["min_polygon_degree"] = polygon_degree
-        env_config["max_polygon_degree"] = polygon_degree
+    # if polygon_degree is not None:
+    #     env_config["min_polygon_degree"] = polygon_degree
+    #     env_config["max_polygon_degree"] = polygon_degree
 
     env = initialize_environment(env_config)
     max_steps = env.max_steps
