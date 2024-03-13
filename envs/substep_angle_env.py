@@ -575,29 +575,5 @@ class AngleEnv(gym.Env):
 
         return self.soft_reset()
 
-
 #######################################################################################################################
 #######################################################################################################################
-
-def initialize_random_polygon(polygon_degree):
-    assert polygon_degree >= 3
-    coordinates = utils.generate_coordinates(polygon_degree)
-    node_ids = list(range(polygon_degree))
-    face_loop = [node_ids]
-    coordinates = dict(zip(node_ids, coordinates))
-    graph = Tiler.from_face_loops(face_loop, coordinates)
-    return graph
-
-
-def initialize_random_polygon_and_desired_degree(polygon_degree, target_angle):
-    coordinates = utils.generate_coordinates(polygon_degree)
-    node_ids = list(range(polygon_degree))
-    face_loop = [node_ids]
-    coordinates = dict(zip(node_ids, coordinates))
-
-    graph = Tiler.from_face_loops(face_loop, coordinates)
-    interior_angles = utils.get_polygon_interior_angles(face_loop[0], graph.vertex_coordinates)
-    desired_degree = {vidx: utils.rounded_desired_degree(angle, target_angle) for vidx, angle in
-                      interior_angles.items()}
-
-    return graph, desired_degree

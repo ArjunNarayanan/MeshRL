@@ -1,7 +1,6 @@
 from envs.substep_angle_env import AngleEnv
 import unittest
 import numpy as np
-from src.tiler import Tiler
 from envs.environment_initializers import Hexagon
 
 

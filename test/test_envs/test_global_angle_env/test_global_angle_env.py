@@ -2,34 +2,13 @@ from envs.global_angle_env import AngleEnv
 import unittest
 import numpy as np
 from src.tiler import Tiler
-
-
-def initialize_graph():
-    face_loops = [
-        [0, 1, 2, 3, 4, 5]
-    ]
-    coords = generate_coordinates()
-    graph = Tiler.from_face_loops(face_loops, coords)
-    return graph
-
-
-def generate_coordinates():
-    c = np.cos(np.pi / 3)
-    s = np.sin(np.pi / 3)
-    coords = [[-c, -s],
-              [c, -s],
-              [1, 0],
-              [c, s],
-              [-c, s],
-              [-1, 0]]
-    coords = dict(zip(range(6), coords))
-    return coords
+from envs.environment_initializers import Hexagon
 
 
 class TestHexEnvInitial(unittest.TestCase):
     def setUp(self) -> None:
-        self.env = AngleEnv(3, [6], template_size=6)
-        self.env.graph = initialize_graph()
+        initializer = Hexagon()
+        self.env = AngleEnv(3, initializer, template_size=6)
 
         self.env.template_center = (3, self.env.graph.half_edge_tag)
         self.env._build_template()
@@ -57,10 +36,10 @@ class TestHexEnvInitial(unittest.TestCase):
 
 class TestHexEnvSteps(unittest.TestCase):
     def setUp(self) -> None:
-        self.env = AngleEnv(3, [6], template_size=8)
-        self.env.graph = initialize_graph()
-        self.env._step_insert_edge(5, 2)
+        initializer = Hexagon()
+        self.env = AngleEnv(3, initializer, template_size=8)
 
+        self.env._step_insert_edge(5, 2)
         self.env.template_center = (3, self.env.graph.half_edge_tag)
         self.env.half_edge_angles = self.env.graph.half_edge_angles()
         self.env._build_template()
@@ -73,16 +52,16 @@ class TestHexEnvSteps(unittest.TestCase):
 
 class TestCompositeActions(unittest.TestCase):
     def setUp(self) -> None:
+        initializer = Hexagon()
         self.env = AngleEnv(
             3,
-            [6],
+            initializer,
             face_reward_weight=0.5,
             angle_reward_weight=0.5,
             vertex_reward_weight=0,
             template_size=14,
             smooth_iterations=0
         )
-        self.env.graph = initialize_graph()
 
         self.env._step_insert_edge(0, 2)
         self.env._step_insert_vertex(7)
