@@ -19,20 +19,40 @@ class LEnv:
 
     def __call__(self):
         coords = self.generate_coordinates()
-        loop = [0, 1, 2, 3, 4, 5]
-        desired_degree = [2, 2, 2, 4, 2, 2]
-        pos2id = list(range(6))
-        np.random.shuffle(pos2id)
-
-        loop = [[loop[pos2id[id]] for id in range(6)]]
-        coords = {pos2id[id]: coords[pos2id[id]] for id in range(6)}
-        desired_degree = [desired_degree[pos2id[id]] for id in range(6)]
-        
-        desired_degree = dict(zip(range(6), desired_degree))
+        loop = [[0, 1, 2, 3, 4, 5]]
+        desired_degree = dict(zip(range(6), [2, 2, 2, 4, 2, 2]))
 
         graph = Tiler.from_face_loops(loop, coords)
         return graph, desired_degree
 
+
+class RandomLEnv:
+    @staticmethod
+    def generate_coordinates():
+        coords = [
+            [0, 0],
+            [2, 0],
+            [2, 1],
+            [1, 1],
+            [1, 2],
+            [0, 2],
+        ]
+        coords = dict(zip(range(6), coords))
+        return coords
+
+    def __call__(self):
+        coords = self.generate_coordinates()
+        loop = [0, 1, 2, 3, 4, 5]
+        desired_degree = dict(zip(range(6), [2, 2, 2, 4, 2, 2]))
+
+        new_ids = loop.copy()
+        np.random.shuffle(new_ids)
+        new_desired_degree = {new_ids[idx]: desired_degree[idx] for idx in range(6)}
+        new_coords = {new_ids[idx]: coords[idx] for idx in range(6)}
+        new_loop = [new_ids]
+
+        graph = Tiler.from_face_loops(new_loop, new_coords)
+        return graph, new_desired_degree
 
 class RandomPolygon:
     def __init__(self, polygon_degree_range, target_angle):

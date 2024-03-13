@@ -8,6 +8,8 @@ def get_env_initializer(init_config):
     name = init_config["name"]
     if name == "LEnv":
         return init.LEnv()
+    elif name == "RandomLEnv":
+        return init.RandomLEnv()
     elif name == "Hexagon":
         return init.Hexagon()
     elif name == "CenterCrack":
