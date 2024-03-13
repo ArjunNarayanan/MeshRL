@@ -94,9 +94,7 @@ class AngleEnv(gym.Env):
     @classmethod
     def from_config(cls, config):
         face_desired_degree = config["face_desired_degree"]
-        min_polygon_degree = config["min_polygon_degree"]
-        max_polygon_degree = config["max_polygon_degree"]
-        polygon_degree_range = list(range(min_polygon_degree, max_polygon_degree + 1))
+        graph_initializer = config["graph_initializer"]
 
         template_size = config["template_size"]
         max_steps_factor = config.get("max_steps_factor", 2)
@@ -108,12 +106,11 @@ class AngleEnv(gym.Env):
         vertex_reward_weight = config.get("vertex_reward_weight", 1 / 3)
 
         use_boundary = config.get("use_boundary", False)
-        fixed_reset = config.get("fixed_reset", False)
         smooth_iterations = config.get("smooth_iterations", 5)
 
         return cls(
             face_desired_degree,
-            polygon_degree_range,
+            graph_initializer,
             template_size=template_size,
             max_steps_factor=max_steps_factor,
             logdir=logdir,
