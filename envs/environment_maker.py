@@ -1,10 +1,36 @@
 from envs.substep_angle_env import AngleEnv as SubstepAngleEnv
 from envs.random_polygon_tiler_env import RandomPolygonEnv
 from envs.global_angle_env import AngleEnv as GlobalAngleEnv
+import envs.environment_initializers as init
+
+
+def get_env_initializer(init_config):
+    name = init_config["name"]
+    if name == "LEnv":
+        return init.LEnv()
+    elif name == "Hexagon":
+        return init.Hexagon()
+    elif name == "CenterCrack":
+        return init.CenterCrack()
+    elif name == "SquareHole":
+        return init.SquareHole()
+    elif name == "RandomPolygon":
+        min_degree = init_config["min_polygon_degree"]
+        max_degree = init_config["max_polygon_degree"]
+        angle = init_config["target_angle"]
+        degree_range = list(range(min_degree, max_degree + 1))
+        return init.RandomPolygon(degree_range, angle)
+    else:
+        raise ValueError("Unexpected env initializer with name : ", name)
 
 
 def initialize_environment(env_config):
+    env_config = env_config.copy()
+
     env_name = env_config["name"]
+    initializer = get_env_initializer(env_config["initializer"])
+    env_config["graph_initializer"] = initializer
+
     if env_name == "RandomPolygonEnv":
         return RandomPolygonEnv.from_config(env_config)
     elif env_name == "SubstepAngleEnv":
