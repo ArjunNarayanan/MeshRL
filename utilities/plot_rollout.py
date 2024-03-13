@@ -122,9 +122,6 @@ if __name__ == "__main__":
     model = load_model_from_checkpoint(checkpoint, config_fn)
 
     env_config = config["environment"]
-    # if polygon_degree is not None:
-    #     env_config["min_polygon_degree"] = polygon_degree
-    #     env_config["max_polygon_degree"] = polygon_degree
 
     env = initialize_environment(env_config)
     max_steps = env.max_steps
