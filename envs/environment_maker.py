@@ -1,6 +1,7 @@
 from envs.substep_angle_env import AngleEnv as SubstepAngleEnv
 from envs.random_polygon_tiler_env import RandomPolygonEnv
 from envs.global_angle_env import AngleEnv as GlobalAngleEnv
+from envs.angle_env_with_length import AngleEnvWithLength
 import envs.environment_initializers as init
 
 
@@ -39,6 +40,8 @@ def initialize_environment(env_config):
         return SubstepAngleEnv.from_config(env_config)
     elif env_name == "GlobalAngleEnv":
         return GlobalAngleEnv.from_config(env_config)
+    elif env_name == "AngleEnvWithLength":
+        return AngleEnvWithLength.from_config(env_config)
     else:
         raise TypeError("Unexpected environment name : ", env_name)
 
