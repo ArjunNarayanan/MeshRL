@@ -54,6 +54,7 @@ class RandomLEnv:
         graph = Tiler.from_face_loops(new_loop, new_coords)
         return graph, new_desired_degree
 
+
 class RandomPolygon:
     def __init__(self, polygon_degree_range, target_angle):
         self.polygon_degree_range = polygon_degree_range

@@ -77,12 +77,13 @@ class AngleEnv(gym.Env):
         self.num_features = self.get_feature_size()
 
         self.action_space = Discrete(self.num_actions_per_half_edge)
-        self.vertex_degree_threshold = 3
-        self.face_degree_threshold = 10
+        self.vertex_degree_threshold = 5
+        self.face_degree_threshold = 5
+        features_max_val = max(self.vertex_degree_threshold, self.face_degree_threshold)
 
         self.observation_space = Dict(
             {
-                "features": Box(low=0, high=10, shape=(self.template_size, self.num_features)),
+                "features": Box(low=0, high=features_max_val, shape=(self.template_size, self.num_features)),
                 "next": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
                 "previous": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
                 "twin": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
@@ -248,6 +249,9 @@ class AngleEnv(gym.Env):
             return True
 
         if self.num_steps >= self.max_steps:
+            return True
+
+        if self.score == 0:
             return True
 
         return False
@@ -443,7 +447,10 @@ class AngleEnv(gym.Env):
             self._step_delete_source_vertex(half_edge)
 
     def _get_reward(self):
-        return self.reward
+        if self.exception_occurred:
+            return 0
+        else:
+            return self.reward
 
     def _update_scores_on_step(self):
         prev_face_score = self.global_face_score

@@ -52,6 +52,28 @@ class TestLEnv(unittest.TestCase):
         self.assertEqual(self.env.global_angle_score, 0)
         self.assertEqual(self.env.reward, 1)
 
+    def test_reset(self):
+        self.env.step(4)
+        self.env.template_center = (0, self.env.graph.half_edge_tag)
+        self.env._build_template()
+        self.env.step(8)
+        self.env.template_center = (0, self.env.graph.half_edge_tag)
+        self.env._build_template()
+        self.env.step(16)
+        self.env.template_center = (0, self.env.graph.half_edge_tag)
+        self.env._build_template()
+        self.env.step(14)
+
+        self.assertEqual(self.env.global_face_score, 0)
+        self.assertEqual(self.env.global_vertex_score, 0)
+        self.assertEqual(self.env.global_angle_score, 0)
+        self.assertEqual(self.env.reward, 1)
+
+        self.env.reset()
+        self.assertEqual(self.env.global_face_score, 2)
+        self.assertEqual(self.env.global_vertex_score, 2)
+        self.assertEqual(self.env.global_angle_score, 2)
+
 
 if __name__ == "__main__":
     unittest.main()

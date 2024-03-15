@@ -1,13 +1,15 @@
 from envs.random_polygon_tiler_env import RandomPolygonEnv
 import unittest
 import numpy as np
+from envs.environment_initializers import Hexagon
 
 
 class TestInsertHalfedge(unittest.TestCase):
     def setUp(self) -> None:
+        initializer = Hexagon()
         self.env = RandomPolygonEnv(
             3,
-            [6],
+            initializer,
             template_size=6,
             face_reward_weight=1,
             vertex_reward_weight=1
@@ -172,9 +174,10 @@ class TestInsertHalfedge(unittest.TestCase):
 
 class TestHexEnvTemplate3(unittest.TestCase):
     def setUp(self) -> None:
+        initializer = Hexagon()
         self.env = RandomPolygonEnv(
             3,
-            [6],
+            initializer,
             template_size=3,
         )
 
@@ -212,9 +215,10 @@ class TestHexEnvTemplate3(unittest.TestCase):
 
 class TestObs4(unittest.TestCase):
     def setUp(self) -> None:
+        initializer = Hexagon()
         env = RandomPolygonEnv(
             3,
-            [6],
+            initializer,
             template_size=4,
         )
         for vidx, _ in env.vertex_desired_degree.items():
@@ -258,9 +262,10 @@ class TestObs4(unittest.TestCase):
 
 class TestObs5(unittest.TestCase):
     def setUp(self) -> None:
+        initializer = Hexagon()
         env = RandomPolygonEnv(
             3,
-            [6],
+            initializer,
             template_size=5,
         )
         for vidx, _ in env.vertex_desired_degree.items():
@@ -306,15 +311,16 @@ class TestObs5(unittest.TestCase):
 
 class TestActionSequence(unittest.TestCase):
     def setUp(self) -> None:
+        initializer = Hexagon()
         env = RandomPolygonEnv(
             3,
-            [6],
+            initializer,
             template_size=18,
         )
         for vidx, _ in env.vertex_desired_degree.items():
             env.vertex_desired_degree[vidx] = 3
         env._update_scores_on_reset()
-        
+
         env._step_insert_edge(5, 2)
         env._step_insert_vertex(3)
         env._step_insert_vertex(6)
