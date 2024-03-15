@@ -276,13 +276,13 @@ class AngleEnv(gym.Env):
         coordinate_features = self._get_coordinate_features(source_vertices)
         vertex_desired_degree = [self.vertex_desired_degree[vidx] for vidx in source_vertices]
         vertex_irregularities = [
-            min((self.graph.vertex_degree(vidx) - vdesired) / vdesired, self.vertex_degree_threshold) for
+            min(self.graph.vertex_degree(vidx) / vdesired, self.vertex_degree_threshold) for
             vidx, vdesired in zip(source_vertices, vertex_desired_degree)
         ]
 
         fdesired = self.face_desired_degree
         face_irregularities = [
-            min((self.graph.face_degree(fidx) - fdesired) / fdesired, self.face_degree_threshold) for
+            min(self.graph.face_degree(fidx) / fdesired, self.face_degree_threshold) for
             fidx in faces
         ]
 
