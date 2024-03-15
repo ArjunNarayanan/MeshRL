@@ -54,5 +54,7 @@ def get_env_feature_size(env_config):
         return SubstepAngleEnv.get_feature_size()
     elif env_name == "GlobalAngleEnv":
         return GlobalAngleEnv.get_feature_size()
+    elif env_name == "AngleEnvWithLength":
+        return AngleEnvWithLength.get_feature_size()
     else:
         raise TypeError("Unexpected environment name : ", env_name)
