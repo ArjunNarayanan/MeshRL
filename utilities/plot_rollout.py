@@ -43,7 +43,7 @@ def make_output_folder(dir):
 
 
 def plot_env(env, filename=None, plot_vertex_scores=False):
-    renderer = Renderer(env.graph, env.graph.vertex_coordinates)
+    renderer = Renderer(env.graph, env.graph.vertex_coordinates, label_vertices=True)
     renderer.coords = env.graph.vertex_coordinates
     renderer.plot()
     if plot_vertex_scores:
