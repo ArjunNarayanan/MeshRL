@@ -31,8 +31,9 @@ def initialize_environment(env_config):
     env_config = env_config.copy()
 
     env_name = env_config["name"]
-    initializer = get_env_initializer(env_config["initializer"])
-    env_config["graph_initializer"] = initializer
+    if "initializer" in env_config:
+        initializer = get_env_initializer(env_config["initializer"])
+        env_config["graph_initializer"] = initializer
 
     if env_name == "RandomPolygonEnv":
         return RandomPolygonEnv.from_config(env_config)
