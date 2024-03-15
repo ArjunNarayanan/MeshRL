@@ -29,34 +29,35 @@ graph = initialize_graph()
 renderer = Renderer(
     graph,
     coords=graph.vertex_coordinates,
-    label_vertices=True
+    label_vertices=True,
+    label_halfedge=True
 )
 renderer.plot()
 
-figname = "examples/figures/initial.pdf"
-renderer.fig.savefig(figname)
+figname = "examples/figures/ops-initial.png"
+# renderer.fig.savefig(figname)
 
-graph.insert_half_edge(0, 2)
+graph.insert_half_edge(0, 1)
 renderer.plot()
-figname = "examples/figures/insert-edge.pdf"
-renderer.fig.savefig(figname)
+figname = "examples/figures/insert-edge.png"
+# renderer.fig.savefig(figname)
 
-graph.insert_vertex(6)
-renderer.plot()
-figname = "examples/figures/insert-vertex.pdf"
-renderer.fig.savefig(figname)
-
-graph.insert_half_edge(7, 1)
-renderer.plot()
-figname = "examples/figures/insert-edge2.pdf"
-renderer.fig.savefig(figname)
-
-graph.delete_half_edge(6)
-renderer.plot()
-figname = "examples/figures/delete-edge.pdf"
-renderer.fig.savefig(figname)
-
-graph.delete_source_vertex(11)
-renderer.plot()
-figname = "examples/figures/delete-vertex.pdf"
-renderer.fig.savefig(figname)
+# graph.insert_vertex(6)
+# renderer.plot()
+# figname = "examples/figures/insert-vertex.pdf"
+# renderer.fig.savefig(figname)
+#
+# graph.insert_half_edge(7, 1)
+# renderer.plot()
+# figname = "examples/figures/insert-edge2.pdf"
+# renderer.fig.savefig(figname)
+#
+# graph.delete_half_edge(6)
+# renderer.plot()
+# figname = "examples/figures/delete-edge.pdf"
+# renderer.fig.savefig(figname)
+#
+# graph.delete_source_vertex(11)
+# renderer.plot()
+# figname = "examples/figures/delete-vertex.pdf"
+# renderer.fig.savefig(figname)
