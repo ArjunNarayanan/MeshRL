@@ -23,6 +23,8 @@ class AngleEnv(gym.Env):
             vertex_reward_weight=1 / 3,
             use_boundary=False,
             smooth_iterations=5,
+            vertex_degree_threshold=10,
+            face_degree_threshold=10
     ):
         super().__init__()
         self.graph_initializer = graph_initializer
@@ -77,8 +79,8 @@ class AngleEnv(gym.Env):
         self.num_features = self.get_feature_size()
 
         self.action_space = Discrete(self.num_actions_per_half_edge)
-        self.vertex_degree_threshold = 5
-        self.face_degree_threshold = 5
+        self.vertex_degree_threshold = vertex_degree_threshold
+        self.face_degree_threshold = face_degree_threshold
         features_max_val = max(self.vertex_degree_threshold, self.face_degree_threshold)
 
         self.observation_space = Dict(
@@ -109,6 +111,9 @@ class AngleEnv(gym.Env):
         use_boundary = config.get("use_boundary", False)
         smooth_iterations = config.get("smooth_iterations", 5)
 
+        vertex_degree_threshold = config.get("vertex_degree_threshold", 10)
+        face_degree_threshold = config.get("face_degree_threshold", 10)
+
         return cls(
             face_desired_degree,
             graph_initializer,
@@ -120,7 +125,9 @@ class AngleEnv(gym.Env):
             angle_reward_weight=angle_reward_weight,
             vertex_reward_weight=vertex_reward_weight,
             use_boundary=use_boundary,
-            smooth_iterations=smooth_iterations
+            smooth_iterations=smooth_iterations,
+            vertex_degree_threshold=vertex_degree_threshold,
+            face_degree_threshold=face_degree_threshold
         )
 
     @staticmethod
@@ -276,20 +283,12 @@ class AngleEnv(gym.Env):
         coordinate_features = self._get_coordinate_features(source_vertices)
         vertex_desired_degree = [self.vertex_desired_degree[vidx] for vidx in source_vertices]
         vertex_irregularities = [
-            min(self.graph.vertex_degree(vidx) / vdesired, self.vertex_degree_threshold) for
-            vidx, vdesired in zip(source_vertices, vertex_desired_degree)
+            min(self.graph.vertex_degree(vidx), self.vertex_degree_threshold) for vidx in source_vertices
         ]
 
-        fdesired = self.face_desired_degree
-        face_irregularities = [
-            min(self.graph.face_degree(fidx) / fdesired, self.face_degree_threshold) for
-            fidx in faces
-        ]
+        face_irregularities = [min(self.graph.face_degree(fidx), self.face_degree_threshold) for fidx in faces]
 
-        angle_irregularities = [
-            (self.half_edge_angles[hidx]) / self.desired_angle for
-            hidx in self.index_to_half_edge
-        ]
+        angle_irregularities = [(self.half_edge_angles[hidx]) / self.desired_angle for hidx in self.index_to_half_edge]
 
         num_half_edges = len(self.index_to_half_edge)
 

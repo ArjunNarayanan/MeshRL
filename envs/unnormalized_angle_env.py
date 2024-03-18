@@ -7,21 +7,6 @@ class UnnormalizedAngleEnv(AngleEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.vertex_degree_threshold = 10
-        self.face_degree_threshold = 10
-        features_max_val = max(self.vertex_degree_threshold, self.face_degree_threshold)
-
-        self.observation_space = Dict(
-            {
-                "features": Box(low=0, high=features_max_val, shape=(self.template_size, self.num_features)),
-                "next": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
-                "previous": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
-                "twin": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
-                "mask": Box(low=-np.inf, high=0, shape=(self.total_num_actions_in_template,)),
-                "progress": Box(low=0, high=1, shape=(1,))
-            }
-        )
-
     @staticmethod
     def get_feature_size():
         return 5
