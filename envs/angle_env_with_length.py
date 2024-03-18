@@ -31,19 +31,17 @@ class AngleEnvWithLength(AngleEnv):
         length_features = self._get_length_features()
         vertex_desired_degree = [self.vertex_desired_degree[vidx] for vidx in source_vertices]
         vertex_irregularities = [
-            min((self.graph.vertex_degree(vidx) - vdesired) / vdesired, self.vertex_degree_threshold) for
+            min((self.graph.vertex_degree(vidx)) / vdesired, self.vertex_degree_threshold) for
             vidx, vdesired in zip(source_vertices, vertex_desired_degree)
         ]
 
         fdesired = self.face_desired_degree
         face_irregularities = [
-            min((self.graph.face_degree(fidx) - fdesired) / fdesired, self.face_degree_threshold) for
-            fidx in faces
+            min((self.graph.face_degree(fidx)) / fdesired, self.face_degree_threshold) for fidx in faces
         ]
 
         angle_irregularities = [
-            (self.half_edge_angles[hidx] - self.desired_angle) / self.desired_angle for
-            hidx in self.index_to_half_edge
+            (self.half_edge_angles[hidx]) / self.desired_angle for hidx in self.index_to_half_edge
         ]
 
         num_half_edges = len(self.index_to_half_edge)

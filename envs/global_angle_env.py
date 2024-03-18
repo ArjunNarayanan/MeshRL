@@ -287,7 +287,7 @@ class AngleEnv(gym.Env):
         ]
 
         angle_irregularities = [
-            (self.half_edge_angles[hidx] - self.desired_angle) / self.desired_angle for
+            (self.half_edge_angles[hidx]) / self.desired_angle for
             hidx in self.index_to_half_edge
         ]
 
