@@ -56,13 +56,14 @@ class RandomLEnv:
 
 
 class RandomPolygon:
-    def __init__(self, polygon_degree_range, target_angle):
+    def __init__(self, polygon_degree_range, target_angle, scale=0.5):
         self.polygon_degree_range = polygon_degree_range
         self.target_angle = target_angle
+        self.scale = scale
 
     def __call__(self):
         polygon_degree = np.random.choice(self.polygon_degree_range)
-        coordinates = self.generate_random_coordinates(polygon_degree, self.target_angle)
+        coordinates = self.generate_random_coordinates(polygon_degree, self.scale)
         node_ids = list(range(polygon_degree))
         face_loop = [node_ids]
         coordinates = dict(zip(node_ids, coordinates))
@@ -73,8 +74,9 @@ class RandomPolygon:
         return graph, desired_degree
 
     @staticmethod
-    def generate_random_coordinates(polygon_degree, scale=0.5):
+    def generate_random_coordinates(polygon_degree, scale):
         assert polygon_degree >= 3
+
         angle = 2 * np.pi / polygon_degree
         angular_increments = angle * np.arange(polygon_degree)
         radii = (1 - scale) + scale * np.random.rand(polygon_degree)
