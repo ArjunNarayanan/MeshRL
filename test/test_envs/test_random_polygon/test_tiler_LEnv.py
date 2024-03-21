@@ -5,7 +5,7 @@ from envs.environment_initializers import LEnv
 
 class TestLEnv(unittest.TestCase):
     def setUp(self) -> None:
-        self.initializer = LEnv()
+        self.initializer = LEnv(90)
         env = RandomPolygonEnv(4, self.initializer)
         env.template_center = (0, env.graph.half_edge_tag)
         env._build_template()

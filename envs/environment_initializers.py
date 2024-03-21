@@ -4,6 +4,9 @@ import envs.polygon_utils as utils
 
 
 class LEnv:
+    def __init__(self, target_angle):
+        self.target_angle = target_angle
+
     @staticmethod
     def generate_coordinates():
         coords = [
@@ -20,39 +23,13 @@ class LEnv:
     def __call__(self):
         coords = self.generate_coordinates()
         loop = [[0, 1, 2, 3, 4, 5]]
-        desired_degree = dict(zip(range(6), [2, 2, 2, 4, 2, 2]))
-
         graph = Tiler.from_face_loops(loop, coords)
+
+        interior_angles = utils.get_polygon_interior_angles(loop[0], graph.vertex_coordinates)
+        desired_degree = {vidx: utils.rounded_desired_degree(angle, self.target_angle) for vidx, angle in
+                          interior_angles.items()}
+
         return graph, desired_degree
-
-
-class RandomLEnv:
-    @staticmethod
-    def generate_coordinates():
-        coords = [
-            [0, 0],
-            [2, 0],
-            [2, 1],
-            [1, 1],
-            [1, 2],
-            [0, 2],
-        ]
-        coords = dict(zip(range(6), coords))
-        return coords
-
-    def __call__(self):
-        coords = self.generate_coordinates()
-        loop = [0, 1, 2, 3, 4, 5]
-        desired_degree = dict(zip(range(6), [2, 2, 2, 4, 2, 2]))
-
-        new_ids = loop.copy()
-        np.random.shuffle(new_ids)
-        new_desired_degree = {new_ids[idx]: desired_degree[idx] for idx in range(6)}
-        new_coords = {new_ids[idx]: coords[idx] for idx in range(6)}
-        new_loop = [new_ids]
-
-        graph = Tiler.from_face_loops(new_loop, new_coords)
-        return graph, new_desired_degree
 
 
 class RandomPolygon:
@@ -87,6 +64,9 @@ class RandomPolygon:
 
 
 class Hexagon:
+    def __init__(self, target_angle):
+        self.target_angle = target_angle
+
     @staticmethod
     def generate_coordinates():
         c = np.cos(np.pi / 3)
@@ -106,11 +86,18 @@ class Hexagon:
         ]
         coords = self.generate_coordinates()
         graph = Tiler.from_face_loops(face_loops, coords)
-        desired_degree = dict(zip(range(6), 6 * [3]))
+
+        interior_angles = utils.get_polygon_interior_angles(face_loops[0], graph.vertex_coordinates)
+        desired_degree = {vidx: utils.rounded_desired_degree(angle, self.target_angle) for vidx, angle in
+                          interior_angles.items()}
         return graph, desired_degree
 
 
 class CenterCrack:
+    def __init__(self, target_angle):
+        assert target_angle == 90
+        self.target_angle = target_angle
+
     @staticmethod
     def generate_coordinates():
         coords = [
@@ -133,12 +120,17 @@ class CenterCrack:
             [0, 1, 2, 3, 4, 5, 6, 7, 8, 5, 4]
         ]
         graph = Tiler.from_face_loops(loop, coords)
+
         desired_degree = dict(zip(range(9), [2, 2, 2, 2, 3, 5, 3, 5, 3]))
 
         return graph, desired_degree
 
 
 class SquareHole:
+    def __init__(self, target_angle):
+        assert target_angle == 90
+        self.target_angle = target_angle
+
     @staticmethod
     def generate_coordinates():
         coords = [
@@ -160,6 +152,8 @@ class SquareHole:
             [0, 1, 2, 3, 0, 4, 7, 6, 5, 4]
         ]
         graph = Tiler.from_face_loops(loop, coords)
+
+        interior_angles = utils.get_polygon_interior_angles(loop[0], graph.vertex_coordinates)
         desired_degree = dict(zip(range(8), [2, 2, 2, 2, 4, 4, 4, 4]))
 
         return graph, desired_degree

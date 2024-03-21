@@ -200,9 +200,9 @@ class AngleEnv(gym.Env):
         self.min_score = self.score
 
         self.initial_score = self.score
-        self.initial_face_score = self.global_face_score
-        self.initial_angle_score = self.global_angle_score
-        self.initial_vertex_score = self.global_vertex_score
+        self.initial_face_score = max(self.global_face_score, 1)
+        self.initial_angle_score = max(self.global_angle_score, 1)
+        self.initial_vertex_score = max(self.global_vertex_score, 1)
 
         self.reward = 0
 

@@ -6,7 +6,7 @@ from envs.environment_initializers import Hexagon
 
 class TestInsertHalfedge(unittest.TestCase):
     def setUp(self) -> None:
-        initializer = Hexagon()
+        initializer = Hexagon(90)
         self.env = RandomPolygonEnv(
             3,
             initializer,
@@ -177,7 +177,7 @@ class TestInsertHalfedge(unittest.TestCase):
 
 class TestHexEnvTemplate3(unittest.TestCase):
     def setUp(self) -> None:
-        initializer = Hexagon()
+        initializer = Hexagon(60)
         self.env = RandomPolygonEnv(
             3,
             initializer,
@@ -219,7 +219,7 @@ class TestHexEnvTemplate3(unittest.TestCase):
 
 class TestObs4(unittest.TestCase):
     def setUp(self) -> None:
-        initializer = Hexagon()
+        initializer = Hexagon(60)
         env = RandomPolygonEnv(
             3,
             initializer,
@@ -271,7 +271,7 @@ class TestObs4(unittest.TestCase):
 
 class TestObs5(unittest.TestCase):
     def setUp(self) -> None:
-        initializer = Hexagon()
+        initializer = Hexagon(60)
         env = RandomPolygonEnv(
             3,
             initializer,
@@ -328,7 +328,7 @@ class TestObs5(unittest.TestCase):
 
 class TestActionSequence(unittest.TestCase):
     def setUp(self) -> None:
-        initializer = Hexagon()
+        initializer = Hexagon(60)
         env = RandomPolygonEnv(
             3,
             initializer,

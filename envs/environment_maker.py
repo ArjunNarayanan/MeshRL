@@ -7,20 +7,18 @@ import envs.environment_initializers as init
 
 def get_env_initializer(init_config):
     name = init_config["name"]
+    angle = init_config["target_angle"]
     if name == "LEnv":
-        return init.LEnv()
-    elif name == "RandomLEnv":
-        return init.RandomLEnv()
+        return init.LEnv(angle)
     elif name == "Hexagon":
-        return init.Hexagon()
+        return init.Hexagon(angle)
     elif name == "CenterCrack":
-        return init.CenterCrack()
+        return init.CenterCrack(angle)
     elif name == "SquareHole":
-        return init.SquareHole()
+        return init.SquareHole(angle)
     elif name == "RandomPolygon":
         min_degree = init_config["min_polygon_degree"]
         max_degree = init_config["max_polygon_degree"]
-        angle = init_config["target_angle"]
         degree_range = list(range(min_degree, max_degree + 1))
         return init.RandomPolygon(degree_range, angle)
     else:

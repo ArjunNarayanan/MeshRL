@@ -122,9 +122,8 @@ class Renderer:
 
         self.face_centroids = self._compute_face_centroids()
         self.plot_all_faces()
+        self.plot_vertices(label=self.label_vertices)
 
-        if self.label_vertices:
-            self.plot_vertices()
         if self.label_halfedge:
             self.plot_all_halfedges()
 
