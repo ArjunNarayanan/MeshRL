@@ -1,6 +1,7 @@
 import numpy as np
 from src.tiler import Tiler
 from src.render import Renderer
+import os
 
 
 def generate_coordinates():
@@ -30,34 +31,43 @@ renderer = Renderer(
     graph,
     coords=graph.vertex_coordinates,
     label_vertices=True,
-    label_halfedge=True
+    # label_halfedge=True,
+    vertex_size=30,
+    fontsize=20,
 )
 renderer.plot()
+output_dir = "examples/figures/operations"
 
-figname = "examples/figures/ops-initial.png"
-# renderer.fig.savefig(figname)
+figname = "initial.pdf"
+outputfile = os.path.join(output_dir, figname)
+renderer.fig.savefig(outputfile)
 
-graph.insert_half_edge(0, 1)
+graph.insert_half_edge(0, 2)
 renderer.plot()
-figname = "examples/figures/insert-edge.png"
-# renderer.fig.savefig(figname)
+figname = "insert-edge.pdf"
+outputfile = os.path.join(output_dir, figname)
+renderer.fig.savefig(outputfile)
 
-# graph.insert_vertex(6)
-# renderer.plot()
-# figname = "examples/figures/insert-vertex.pdf"
-# renderer.fig.savefig(figname)
-#
-# graph.insert_half_edge(7, 1)
-# renderer.plot()
-# figname = "examples/figures/insert-edge2.pdf"
-# renderer.fig.savefig(figname)
-#
-# graph.delete_half_edge(6)
-# renderer.plot()
-# figname = "examples/figures/delete-edge.pdf"
-# renderer.fig.savefig(figname)
-#
-# graph.delete_source_vertex(11)
-# renderer.plot()
-# figname = "examples/figures/delete-vertex.pdf"
-# renderer.fig.savefig(figname)
+graph.insert_vertex(6)
+renderer.plot()
+figname = "insert-vertex.pdf"
+outputfile = os.path.join(output_dir, figname)
+renderer.fig.savefig(outputfile)
+
+graph.insert_half_edge(7, 1)
+renderer.plot()
+figname = "insert-edge2.pdf"
+outputfile = os.path.join(output_dir, figname)
+renderer.fig.savefig(outputfile)
+
+graph.delete_half_edge(6)
+renderer.plot()
+figname = "delete-edge.pdf"
+outputfile = os.path.join(output_dir, figname)
+renderer.fig.savefig(outputfile)
+
+graph.delete_source_vertex(11)
+renderer.plot()
+figname = "delete-vertex.pdf"
+outputfile = os.path.join(output_dir, figname)
+renderer.fig.savefig(outputfile)

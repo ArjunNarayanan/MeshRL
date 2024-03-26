@@ -54,6 +54,7 @@ class RandomLEnv:
         graph = Tiler.from_face_loops(new_loop, new_coords)
         return graph, new_desired_degree
 
+
 class RandomPolygon:
     def __init__(self, polygon_degree_range, target_angle):
         self.polygon_degree_range = polygon_degree_range
@@ -158,5 +159,67 @@ class SquareHole:
         ]
         graph = Tiler.from_face_loops(loop, coords)
         desired_degree = dict(zip(range(8), [2, 2, 2, 2, 4, 4, 4, 4]))
+
+        return graph, desired_degree
+
+
+class SquareHole2:
+    @staticmethod
+    def generate_coordinates():
+        coords = [
+            [0, 0],
+            [0.5, 0],
+            [0.5, 0.25],
+            [0.25, 0.25],
+            [0.25, 0.75],
+            [0.75, 0.75],
+            [0.75, 0.25],
+            [1, 0],
+            [1, 1],
+            [0, 1],
+        ]
+        coords = dict(zip(range(len(coords)), coords))
+        return coords
+
+    def __call__(self):
+        coords = self.generate_coordinates()
+        loop = [
+            [0, 1, 2, 3, 4, 5, 6, 2, 1, 7, 8, 9]
+        ]
+        graph = Tiler.from_face_loops(loop, coords)
+        desired_degree = dict(zip(range(10), [2, 3, 3, 4, 4, 4, 4, 2, 2, 2]))
+
+        return graph, desired_degree
+
+
+class Arc:
+    @staticmethod
+    def generate_coordinates():
+        coords = [
+            [-1, 0],
+            [-1, 1],
+            [-0.8, 2],
+            [0, 2.5],
+            [0.8, 2],
+            [1, 1],
+            [1, 0],
+            [2, 0],
+            [2, 1],
+            [1.56, 2.5],
+            [0, 3.5],
+            [-1.56, 2.5],
+            [-2, 1],
+            [-2, 0]
+        ]
+        coords = dict(zip(range(len(coords)), coords))
+        return coords
+
+    def __call__(self):
+        coords = self.generate_coordinates()
+        loop = [
+            list(range(14))
+        ]
+        graph = Tiler.from_face_loops(loop, coords)
+        desired_degree = dict(zip(range(14), [2] + 5 * [3] + [2, 2] + 5 * [3] + [2]))
 
         return graph, desired_degree
