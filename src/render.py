@@ -59,7 +59,7 @@ class Renderer:
         for face_id in self.graph.face_list(tag=False):
             self.plot_face(face_id)
 
-    def plot_vertices(self, label=True):
+    def plot_vertices(self, label):
         x = [c[0] for c in self.coords.values()]
         y = [c[1] for c in self.coords.values()]
         self.ax.scatter(x, y, s=self.vertex_size ** 2, color="black")
@@ -134,8 +134,7 @@ class Renderer:
         self.face_centroids = self._compute_face_centroids()
         self.plot_all_faces()
 
-        if self.label_vertices:
-            self.plot_vertices()
+        self.plot_vertices(label=self.label_vertices)
         if self.label_halfedge:
             self.plot_all_halfedges()
 

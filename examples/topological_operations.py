@@ -32,8 +32,9 @@ renderer = Renderer(
     coords=graph.vertex_coordinates,
     label_vertices=True,
     # label_halfedge=True,
-    vertex_size=30,
-    fontsize=20,
+    vertex_size=40,
+    fontsize=35,
+    figsize=9
 )
 renderer.plot()
 output_dir = "examples/figures/operations"
