@@ -157,3 +157,51 @@ class SquareHole:
         desired_degree = dict(zip(range(8), [2, 2, 2, 2, 4, 4, 4, 4]))
 
         return graph, desired_degree
+
+
+class MixedMesh:
+    def __init__(self, target_angle):
+        assert target_angle == 90
+        self.target_angle = target_angle
+
+    @staticmethod
+    def generate_coordinates():
+        coords = Hexagon.generate_coordinates()
+        coords[6] = coords[0] - np.array([0, 1])
+        coords[7] = coords[1] - np.array([0, 1])
+        coords[8] = np.array([1.5, np.sin(np.pi / 3)])
+        return coords
+
+    @staticmethod
+    def generate_angles():
+        angles = {
+            0: 210,
+            1: 210,
+            2: 180,
+            3: 180,
+            4: 120,
+            5: 120,
+            6: 90,
+            7: 90,
+            8: 60,
+        }
+        return angles
+
+    def get_mesh(self):
+        coords = self.generate_coordinates()
+        loop = [
+            [0, 1, 2, 3, 4, 5],
+            [6, 7, 1, 0],
+            [3, 2, 8]
+        ]
+        graph = Tiler.from_face_loops(loop, coords)
+
+        return graph
+
+    def __call__(self):
+        interior_angles = self.generate_angles()
+        desired_degree = {vidx: utils.rounded_desired_degree(angle, self.target_angle) for vidx, angle in
+                          interior_angles.items()}
+
+        graph = self.get_mesh()
+        return graph, desired_degree
