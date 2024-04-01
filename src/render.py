@@ -91,8 +91,15 @@ class Renderer:
         x = halfedge_center[0] + shrink * (face_coords[0] - halfedge_center[0])
         y = halfedge_center[1] + shrink * (face_coords[1] - halfedge_center[1])
 
-        # self.ax.scatter(lx, ly, s=self.vertex_size ** 2, color="red")
-        self.ax.text(x, y, str(idx), color="red", verticalalignment="center", horizontalalignment="center")
+        self.ax.text(
+            x,
+            y,
+            str(idx),
+            color="red",
+            verticalalignment="center",
+            horizontalalignment="center",
+            fontsize=self.fontsize
+        )
 
     def plot_all_halfedges(self):
         for idx in self.graph.halfedge_list(tag=False):
@@ -107,11 +114,26 @@ class Renderer:
             x, y = coord
             if score > 0:
                 self.ax.scatter(x, y, s=self.vertex_size ** 2, color="purple")
-                self.ax.text(x, y, "+" + str(score), color="white", verticalalignment="center",
-                             horizontalalignment="center")
+                self.ax.text(
+                    x,
+                    y,
+                    "+" + str(score),
+                    color="white",
+                    verticalalignment="center",
+                    horizontalalignment="center",
+                    fontsize=self.fontsize
+                )
             elif score < 0:
                 self.ax.scatter(x, y, s=self.vertex_size ** 2, color="red")
-                self.ax.text(x, y, str(score), color="white", verticalalignment="center", horizontalalignment="center")
+                self.ax.text(
+                    x,
+                    y,
+                    str(score),
+                    color="white",
+                    verticalalignment="center",
+                    horizontalalignment="center",
+                    fontsize=self.fontsize
+                )
 
     def plot_face_scores(self, face_desired_degree):
         for face_idx in self.graph.face_list(tag=False):
@@ -120,11 +142,26 @@ class Renderer:
             x, y = self.face_centroids[face_idx]
             if score > 0:
                 self.ax.scatter(x, y, s=self.vertex_size ** 2, color="blue")
-                self.ax.text(x, y, "+" + str(score), color="white", verticalalignment="center",
-                             horizontalalignment="center")
+                self.ax.text(
+                    x,
+                    y,
+                    "+" + str(score),
+                    color="white",
+                    verticalalignment="center",
+                    horizontalalignment="center",
+                    fontsize=self.fontsize
+                )
             elif score < 0:
                 self.ax.scatter(x, y, s=self.vertex_size ** 2, color="green")
-                self.ax.text(x, y, str(score), color="white", verticalalignment="center", horizontalalignment="center")
+                self.ax.text(
+                    x,
+                    y,
+                    str(score),
+                    color="white",
+                    verticalalignment="center",
+                    horizontalalignment="center",
+                    fontsize=self.fontsize
+                )
 
     def plot(self):
         self.ax.clear()

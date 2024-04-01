@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
     polygon_degree_range = range(10, 100, 4)
 
-    ax2.set_title("Scaling of angle score")
+    # ax2.set_title("Scaling of angle score")
     ax2.grid()
     ax2.set_xlabel("Polygon degree", fontsize=16)
     ax2.set_ylabel(r"$s_\theta^0$", fontsize=16)
@@ -86,6 +86,9 @@ if __name__ == "__main__":
     add_to_plots(6, polygon_degree_range, marker="H", label="f*=6")
     ax2.legend(loc="upper left", fontsize=16)
     ax3.legend(loc="upper left", fontsize=16)
+
+    ax2.set_ylim([0,250])
+    ax3.set_ylim([0,250])
 
     fig2.tight_layout()
     fig3.tight_layout()

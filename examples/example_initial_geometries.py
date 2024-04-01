@@ -37,7 +37,7 @@ if __name__ == "__main__":
         env.reset()
         graph = env.graph
 
-        renderer = Renderer(graph, graph.vertex_coordinates, vertex_size=20)
+        renderer = Renderer(graph, graph.vertex_coordinates, vertex_size=30, fontsize=20)
         renderer.plot()
         renderer.plot_vertex_scores(env.vertex_desired_degree)
         renderer.fig.tight_layout()
