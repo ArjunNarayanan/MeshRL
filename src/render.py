@@ -12,15 +12,18 @@ class Renderer:
             shrink=0.1,
             label_halfedge=False,
             label_vertices=False,
+            fontsize=12,
+            figsize=8
     ):
         self.graph = graph
         self.coords = coords
         self.vertex_size = vertex_size
+        self.fontsize = fontsize
         self.shrink = shrink
         self.label_halfedge = label_halfedge
         self.label_vertices = label_vertices
 
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(figsize, figsize))
         self.fig = fig
         self.ax = ax
         self.ax.set_aspect("equal")
@@ -56,7 +59,7 @@ class Renderer:
         for face_id in self.graph.face_list(tag=False):
             self.plot_face(face_id)
 
-    def plot_vertices(self, label=True):
+    def plot_vertices(self, label):
         x = [c[0] for c in self.coords.values()]
         y = [c[1] for c in self.coords.values()]
         self.ax.scatter(x, y, s=self.vertex_size ** 2, color="black")
@@ -64,7 +67,15 @@ class Renderer:
         if label:
             for idx, coord in self.coords.items():
                 x, y = coord
-                self.ax.text(x, y, str(idx), color="white", verticalalignment="center", horizontalalignment="center")
+                self.ax.text(
+                    x,
+                    y,
+                    str(idx),
+                    fontsize=self.fontsize,
+                    color="white",
+                    verticalalignment="center",
+                    horizontalalignment="center"
+                )
 
     def plot_halfedge(self, idx):
         shrink = self.shrink
@@ -122,9 +133,9 @@ class Renderer:
 
         self.face_centroids = self._compute_face_centroids()
         self.plot_all_faces()
-        self.plot_vertices(label=self.label_vertices)
 
+        self.plot_vertices(label=self.label_vertices)
         if self.label_halfedge:
             self.plot_all_halfedges()
 
-        self.fig.tight_layout()
+        # self.fig.tight_layout()
