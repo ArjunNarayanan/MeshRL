@@ -25,7 +25,7 @@ def sample_ppo_params(trial: optuna.Trial):
     n_steps = 1024
     batch_size = 512
 
-    gae_lambda = 1.0 - trial.suggest_float("gae_lambda", 1e-3, 0.2, log=True)
+    gae_lambda = trial.suggest_float("gae_lambda", low=0.5, high=0.999, log=False)
     ent_coef = trial.suggest_float("ent_coef", 1e-8, 0.5, log=True)
     vf_coef = trial.suggest_float("vf_coef", 1e-8, 0.5, log=True)
     clip_range = trial.suggest_float("clip_range", 1e-2, 0.20)
@@ -35,7 +35,12 @@ def sample_ppo_params(trial: optuna.Trial):
 
     ortho_init = trial.suggest_categorical("ortho_init", [False, True])
     feature_extractor_layers = trial.suggest_int("feature_extractor_layers", 2, 10)
-    feature_extractor_size = 2 ** trial.suggest_int("feature_extractor_size", 6, 10)
+
+    feature_extractor_size_options = [2 ** x for x in range(6, 11)]
+    feature_extractor_size = trial.suggest_categorical(
+        "feature_extractor_size",
+        choices=feature_extractor_size_options
+    )
 
     policy_kwargs = dict(
         features_extractor_class=FeatureExtractor,
