@@ -72,7 +72,7 @@ def plot_optimization_history(study, fontsize=16, ylim=(-0.5, 1), linewidth=3):
     return fig
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-input", help="input directoru", required=True)
     parser.add_argument("-study", help="study name", required=True)
@@ -103,7 +103,7 @@ if __name__=="__main__":
     fig.savefig(filepath)
 
     print("\nPLOTTING OPTIMIZATION HISTORY")
-    fig = plot_optimization_history(study, ylim=(0,1))
+    fig = plot_optimization_history(study, ylim=(0, 1))
     filename = "optimization-history.pdf"
     filepath = os.path.join(output_folder, filename)
     fig.savefig(filepath)
