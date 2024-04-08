@@ -49,6 +49,7 @@ def step_environment(env, dist):
 
 def get_best_mesh_from_rollout(env):
     best_env = None
+    best_face_score = float("inf")
     best_score = float("inf")
 
     obs = obs_as_tensor(env._get_obs())
@@ -59,33 +60,39 @@ def get_best_mesh_from_rollout(env):
         obs, done = step_environment(env, dist)
         obs = obs_as_tensor(obs)
 
-        if env.get_total_face_score() == 0 and env.score < best_score:
+        if env.get_face_score() < best_face_score:
             best_env = deepcopy(env)
-            best_score = env.score
+            best_face_score = env.get_face_score()
+            best_score = env.get_score()
+        elif env.get_face_score() == best_face_score and env.get_score() < best_score:
+            best_env = deepcopy(env)
+            best_score = env.get_score()
 
-    return best_env, best_score
+    return best_env, best_face_score, best_score
 
 
 def get_best_mesh_from_multi_rollout(num_rollouts=10):
     env = generate_environment(polygon_degree, max_steps_factor)
+    initial_env = deepcopy(env)
 
     best_env = None
+    best_face_score = float("inf")
     best_score = float("inf")
-    initial_env = deepcopy(env)
 
     for rollout in range(num_rollouts):
         print("ROLLOUT : ", rollout)
         env.reset()
 
-        rollout_best_env, score = get_best_mesh_from_rollout(env)
-        if score < best_score:
-            print("\tNew Best Score!")
+        rollout_best_env, rollout_face_score, rollout_score = get_best_mesh_from_rollout(env)
+        if rollout_face_score < best_face_score:
             best_env = rollout_best_env
-            best_score = score
+            best_score = rollout_score
+            best_face_score = rollout_face_score
+            print("\tNew Best Score!")
+            print("\tFace : ", best_face_score)
+            print("\tTotal: ", best_score)
 
-        print("\tScore : ", score)
-
-    return initial_env, best_env, best_score
+    return initial_env, best_env
 
 
 def get_next_rollout_index():
@@ -101,11 +108,9 @@ def get_next_rollout_index():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-input", required=True)
-    parser.add_argument("-degree", default=None, type=int)
     parser.add_argument("-model", default="best_model.zip")
     parser.add_argument("-config", default="config.yml")
     parser.add_argument("-output", default="best-mesh")
-    parser.add_argument("-steps", help="max step factor", default=3, type=int)
     parser.add_argument("-rollout", default=None)
     parser.add_argument("-trials", default=10, type=int)
     args = parser.parse_args()
@@ -138,15 +143,13 @@ if __name__ == "__main__":
     model = load_model_from_checkpoint(checkpoint_file, config_file)
     config = load_yaml_config(config_file)
 
-    initial_env, best_env, best_score = get_best_mesh_from_multi_rollout(num_rollouts=num_trials)
+    initial_env, best_env = get_best_mesh_from_multi_rollout(num_rollouts=num_trials)
 
     output_data = dict(
         initial=initial_env,
         best_env=best_env,
-        best_score=best_score
     )
     output_file_path = os.path.join(rollout_output_folder, "best_mesh.pkl")
     print("\n\n\tWRITING OUTPUT FILE : ", output_file_path)
-    print("\tBEST SCORE : ", best_score)
     with open(output_file_path, "wb") as output_file:
         pickle.dump(output_data, output_file)

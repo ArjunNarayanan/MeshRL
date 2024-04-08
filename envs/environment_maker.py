@@ -22,6 +22,10 @@ def get_env_initializer(init_config):
         scale = init_config.get("scale", 0.5)
         degree_range = list(range(min_degree, max_degree + 1))
         return init.RandomPolygon(degree_range, angle, scale=scale)
+    elif name == "FixedRandomPolygon":
+        polygon_degree = init_config["polygon_degree"]
+        scale = init_config.get("scale", 0.5)
+        return init.FixedRandomPolygon(polygon_degree, angle, scale=scale)
     else:
         raise ValueError("Unexpected env initializer with name : ", name)
 

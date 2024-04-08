@@ -1,6 +1,7 @@
 from src.tiler import Tiler
 import numpy as np
 import envs.polygon_utils as utils
+from copy import deepcopy
 
 
 class LEnv:
@@ -61,6 +62,17 @@ class RandomPolygon:
         y_coord = np.sin(angular_increments) * radii
         coords = [[x, y] for x, y in zip(x_coord, y_coord)]
         return coords
+
+
+class FixedRandomPolygon:
+    def __init__(self, polygon_degree, target_angle, scale=0.5):
+        initializer = RandomPolygon([polygon_degree], target_angle, scale)
+        graph, desired_degree = initializer()
+        self.graph = graph
+        self.desired_degree = desired_degree
+
+    def __call__(self):
+        return deepcopy(self.graph), deepcopy(self.desired_degree)
 
 
 class Hexagon:

@@ -189,6 +189,18 @@ class AngleEnv(gym.Env):
     def _update_global_vertex_score(self):
         self.global_vertex_score = self.global_l1_vertex_score()
 
+    def get_face_score(self):
+        return self.global_face_score
+
+    def get_vertex_score(self):
+        return self.global_vertex_score
+
+    def get_angle_score(self):
+        return self.global_angle_score
+
+    def get_score(self):
+        return self.score
+
     def _update_scores_on_reset(self):
         self._update_global_face_score()
         self._update_global_angle_score()

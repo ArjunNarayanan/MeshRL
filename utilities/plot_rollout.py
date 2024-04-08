@@ -94,6 +94,7 @@ def get_next_rollout_index():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-input", required=True)
+    parser.add_argument("-model", default="best_model.zip")
     parser.add_argument("-rollout", default=None)
     parser.add_argument("-scores", default=False, type=bool)
     parser.add_argument("-smooth", default=0, type=int)
@@ -116,7 +117,7 @@ if __name__ == "__main__":
     config_fn = os.path.join(input_folder, args.config)
     config = load_yaml_config(config_fn)
 
-    checkpoint = os.path.join(input_folder, "best_model.zip")
+    checkpoint = os.path.join(input_folder, args.model)
     model = load_model_from_checkpoint(checkpoint, config_fn)
 
     env_config = config["environment"]
