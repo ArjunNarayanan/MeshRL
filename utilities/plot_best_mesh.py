@@ -4,18 +4,26 @@ import sys
 
 sys.path.append(os.getcwd())
 from src.render import Renderer
-from src.tiler import refine
 import pickle
 
 
-def plot_graph(graph, face_desired_degree, vertex_desired_degree=None, filename=None):
-    renderer = Renderer(graph, graph.vertex_coordinates, vertex_size=vertex_size)
+def plot_graph(
+        graph,
+        face_desired_degree,
+        vertex_desired_degree=None,
+        filename=None,
+        vertex_size=30,
+        fontsize=18,
+        figsize=12
+):
+    renderer = Renderer(graph, graph.vertex_coordinates, vertex_size=vertex_size, fontsize=fontsize, figsize=figsize)
     renderer.coords = graph.vertex_coordinates
     renderer.plot()
     if vertex_desired_degree is not None:
         renderer.plot_vertex_scores(vertex_desired_degree)
     renderer.plot_face_scores(face_desired_degree)
     if filename is not None:
+        renderer.fig.tight_layout()
         renderer.fig.savefig(filename)
 
 
@@ -23,11 +31,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-input", help="path to pickle data file", required=True)
     parser.add_argument("-faces", required=True, help="Face degree of polygon", type=int)
-    parser.add_argument("-refine", default=3, type=int, help="number of refinement levels")
     parser.add_argument("-vertex_size", default=20, type=int)
+    parser.add_argument("-fontsize", default=14, type=int)
     args = parser.parse_args()
 
     vertex_size = args.vertex_size
+    fontsize = args.fontsize
     filename = args.input
     with open(filename, "rb") as input_file:
         data = pickle.load(input_file)
@@ -39,30 +48,24 @@ if __name__ == "__main__":
     best_graph = best_env.graph
     vertex_desired_degree = best_env.vertex_desired_degree
 
-    outputfile = os.path.join(input_folder, "initial.png")
+    outputfile = os.path.join(input_folder, "initial.pdf")
     print("\nPLOTTING INITIAL POLYGON : ", outputfile)
     plot_graph(
         initial_env.graph,
         args.faces,
         vertex_desired_degree=initial_env.vertex_desired_degree,
-        filename=outputfile
+        filename=outputfile,
+        vertex_size=vertex_size,
+        fontsize=fontsize
     )
 
-    outputfile = os.path.join(input_folder, "coarse.png")
+    outputfile = os.path.join(input_folder, "coarse.pdf")
     print("\nPLOTTING COARSE MESH : ", outputfile)
-    plot_graph(best_graph, args.faces, vertex_desired_degree=vertex_desired_degree, filename=outputfile)
-
-    user_defined_vertices = best_graph.user_defined_vertices
-    refined_graph = best_graph
-
-    for refinement_level in range(args.refine):
-        refined_graph = refine(refined_graph, args.faces)
-        refined_graph.smooth_vertices()
-        outputfile = os.path.join(input_folder, "refine-" + str(refinement_level).zfill(2) + ".png")
-        print("\nPLOTTING REFINE MESH : ", outputfile)
-        plot_graph(
-            refined_graph,
-            args.faces,
-            vertex_desired_degree=vertex_desired_degree,
-            filename=outputfile
-        )
+    plot_graph(
+        best_graph,
+        args.faces,
+        vertex_desired_degree=vertex_desired_degree,
+        filename=outputfile,
+        vertex_size=vertex_size,
+        fontsize=fontsize
+    )

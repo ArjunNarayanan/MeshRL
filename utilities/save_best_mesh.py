@@ -9,16 +9,13 @@ import pickle
 sys.path.append(os.getcwd())
 from envs.environment_maker import initialize_environment
 from src.utils import load_yaml_config, load_model_from_checkpoint
+from utilities.plot_best_mesh import plot_graph
 
 
-def generate_environment(polygon_degree, max_steps_factor=None):
+def generate_environment(polygon_degree):
     env_config = config["environment"]
-    env_config["min_polygon_degree"] = polygon_degree
-    env_config["max_polygon_degree"] = polygon_degree
-    env_config["fixed_reset"] = True
-    if max_steps_factor is not None:
-        env_config["max_steps_factor"] = max_steps_factor
-
+    init_config = env_config["initializer"]
+    init_config["polygon_degree"] = polygon_degree
     env = initialize_environment(env_config)
     return env
 
@@ -60,19 +57,22 @@ def get_best_mesh_from_rollout(env):
         obs, done = step_environment(env, dist)
         obs = obs_as_tensor(obs)
 
-        if env.get_face_score() < best_face_score:
+        env_face_score = env.get_face_score()
+        env_score = env.get_score() / env.get_initial_score()
+
+        if env_face_score < best_face_score:
             best_env = deepcopy(env)
-            best_face_score = env.get_face_score()
-            best_score = env.get_score()
-        elif env.get_face_score() == best_face_score and env.get_score() < best_score:
+            best_face_score = env_face_score
+            best_score = env_score
+        elif env_face_score == best_face_score and env_score < best_score:
             best_env = deepcopy(env)
-            best_score = env.get_score()
+            best_score = env_score
 
     return best_env, best_face_score, best_score
 
 
 def get_best_mesh_from_multi_rollout(num_rollouts=10):
-    env = generate_environment(polygon_degree, max_steps_factor)
+    env = generate_environment(polygon_degree)
     initial_env = deepcopy(env)
 
     best_env = None
@@ -88,9 +88,13 @@ def get_best_mesh_from_multi_rollout(num_rollouts=10):
             best_env = rollout_best_env
             best_score = rollout_score
             best_face_score = rollout_face_score
-            print("\tNew Best Score!")
-            print("\tFace : ", best_face_score)
-            print("\tTotal: ", best_score)
+        elif rollout_face_score == best_face_score and rollout_score < best_score:
+            best_env = rollout_best_env
+            best_score = rollout_score
+
+    print("\n\tBest Score")
+    print("\t\tFace : ", best_face_score)
+    print("\t\tTotal: ", best_score)
 
     return initial_env, best_env
 
@@ -108,18 +112,20 @@ def get_next_rollout_index():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-input", required=True)
+    parser.add_argument("-degree", required=True, type=int)
     parser.add_argument("-model", default="best_model.zip")
     parser.add_argument("-config", default="config.yml")
     parser.add_argument("-output", default="best-mesh")
     parser.add_argument("-rollout", default=None)
     parser.add_argument("-trials", default=10, type=int)
+    parser.add_argument("-vertex_size", default=20, type=int)
     args = parser.parse_args()
 
+    vertex_size = args.vertex_size
     input_folder = args.input
     checkpoint = args.model
     config_filename = args.config
     polygon_degree = args.degree
-    max_steps_factor = args.steps
     num_trials = args.trials
 
     print("Generating best mesh for polygon degree : ", polygon_degree)
@@ -144,6 +150,27 @@ if __name__ == "__main__":
     config = load_yaml_config(config_file)
 
     initial_env, best_env = get_best_mesh_from_multi_rollout(num_rollouts=num_trials)
+
+    print("\tPlotting initial geometry")
+    initial_filename = os.path.join(rollout_output_folder, "initial.pdf")
+    face_desired_degree = config["environment"]["face_desired_degree"]
+    plot_graph(
+        initial_env.graph,
+        face_desired_degree,
+        vertex_desired_degree=initial_env.vertex_desired_degree,
+        filename=initial_filename,
+        vertex_size=vertex_size
+    )
+
+    print("\tPlotting model output")
+    best_filename = os.path.join(rollout_output_folder, "coarse.pdf")
+    plot_graph(
+        best_env.graph,
+        face_desired_degree,
+        vertex_desired_degree=best_env.vertex_desired_degree,
+        filename=best_filename,
+        vertex_size=vertex_size
+    )
 
     output_data = dict(
         initial=initial_env,

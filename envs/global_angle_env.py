@@ -201,6 +201,9 @@ class AngleEnv(gym.Env):
     def get_score(self):
         return self.score
 
+    def get_initial_score(self):
+        return self.initial_score
+
     def _update_scores_on_reset(self):
         self._update_global_face_score()
         self._update_global_angle_score()
