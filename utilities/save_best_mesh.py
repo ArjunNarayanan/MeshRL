@@ -12,10 +12,8 @@ from src.utils import load_yaml_config, load_model_from_checkpoint
 from utilities.plot_best_mesh import plot_graph
 
 
-def generate_environment(polygon_degree):
+def generate_environment():
     env_config = config["environment"]
-    init_config = env_config["initializer"]
-    init_config["polygon_degree"] = polygon_degree
     env = initialize_environment(env_config)
     return env
 
@@ -72,7 +70,7 @@ def get_best_mesh_from_rollout(env):
 
 
 def get_best_mesh_from_multi_rollout(num_rollouts=10):
-    env = generate_environment(polygon_degree)
+    env = generate_environment()
     initial_env = deepcopy(env)
 
     best_env = None
@@ -112,25 +110,21 @@ def get_next_rollout_index():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-input", required=True)
-    parser.add_argument("-degree", required=True, type=int)
     parser.add_argument("-model", default="best_model.zip")
     parser.add_argument("-config", default="config.yml")
     parser.add_argument("-output", default="best-mesh")
     parser.add_argument("-rollout", default=None)
     parser.add_argument("-trials", default=10, type=int)
-    parser.add_argument("-vertex_size", default=20, type=int)
+    parser.add_argument("-vertex_size", default=30, type=int)
     args = parser.parse_args()
 
     vertex_size = args.vertex_size
     input_folder = args.input
     checkpoint = args.model
     config_filename = args.config
-    polygon_degree = args.degree
     num_trials = args.trials
 
-    print("Generating best mesh for polygon degree : ", polygon_degree)
-
-    output_folder = os.path.join(input_folder, args.output)
+    output_folder = os.path.join(input_folder, "figures", args.output)
     if not os.path.isdir(output_folder):
         os.makedirs(output_folder)
 
