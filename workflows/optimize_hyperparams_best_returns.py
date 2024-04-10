@@ -133,13 +133,8 @@ class Objective:
 
         model = PPO(**kwargs)
 
-        eval_env = make_vec_env(
-            lambda: initialize_environment(env_config),
-            NUM_ENVS
-        )
-
         eval_callback = TrialEvalCallback(
-            eval_env,
+            env_config,
             trial,
             eval_freq=EVAL_FREQ,
             trials_per_env=TRIALS_PER_ENV,
@@ -158,7 +153,7 @@ class Objective:
         finally:
             # Free memory.
             model.env.close()
-            eval_env.close()
+            eval_callback.eval_env.close()
 
         # Tell the optimizer that the trial failed.
         if nan_encountered:
@@ -181,7 +176,6 @@ if __name__ == "__main__":
     config_filename = args.config
     gpu_id = args.gpu
     config = load_yaml_config(config_filename)
-    env_config = config["environment"]
 
     output_folder = os.path.dirname(config_filename)
     env_config = config["environment"]
@@ -198,6 +192,7 @@ if __name__ == "__main__":
 
     print("\nTotal timesteps : ", N_TIMESTEPS, "\n")
     EVAL_FREQ = int(N_TIMESTEPS / N_EVALUATIONS)
+    EVAL_FREQ = max(EVAL_FREQ // NUM_ENVS, 1)
     print("\nEval Freq : ", EVAL_FREQ, "\n")
     JOBID = os.environ.get("SLURM_JOB_ID")
 
