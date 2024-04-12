@@ -55,11 +55,15 @@ def plot_intermediate_values(study, figsize=(8, 4), fontsize=16, ylim=(-2, 1)):
 def plot_optimization_history(study, fontsize=16, ylim=(-0.5, 1), linewidth=3):
     from optuna.visualization._optimization_history import _ValueState
 
-    info_list = optuna.visualization._optimization_history._get_optimization_history_info_list(study, None,
-                                                                                               "Objective Value", False)
+    info_list = optuna.visualization._optimization_history._get_optimization_history_info_list(
+        study,
+        None,
+        "Objective Value",
+        False
+    )
     trial_numbers, value_info, best_values_info = info_list[0]
     feasible_trials = [n for n, s in zip(trial_numbers, value_info.states) if s == _ValueState.Feasible]
-    feasible_values = value_info.values
+    feasible_values = [v for s, v in zip(value_info.states, value_info.values) if s == _ValueState.Feasible]
 
     fig, ax = plt.subplots()
     ax.scatter(feasible_trials, feasible_values, color="black")
