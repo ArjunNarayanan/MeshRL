@@ -46,7 +46,7 @@ renderer = Renderer(
 renderer.plot()
 ```
 
-![image](examples/figures/hexagon.png)
+![image](examples/figures/initializations/hexagon.png)
 
 Similarly, we can generate mixed meshes with different elements,
 
@@ -70,7 +70,7 @@ renderer = Renderer(
 renderer.plot()
 ```
 
-![image](examples/figures/mixed.png)
+![image](examples/figures/initializations/mixed.png)
 
 `src.tiler.Tiler` exposes useful operations based on the half-edge data-structure. To see the half-edges, use the
 keyword `label_halfedge=True` in the Renderer.
@@ -85,7 +85,7 @@ renderer = Renderer(
 renderer.plot()
 ```
 
-![image](examples/figures/mixed-halfedge.png)
+![image](examples/figures/initializations/mixed-halfedge.png)
 
 The half-edges are labeled in red font. The numbering should be viewed as labels as there is no inherent ordering of
 half-edges. In fact, any hashable type can be used as a label for halfedges, vertices, and faces. Halfedges are
@@ -130,7 +130,7 @@ supports the following edit operations:
 `src.tiler.Tiler.insert_half_edge(hidx, k)` inserts a new edge between source of `hidx` and target of the halfedge that
 is `k` `next` operations ahead. Consider the hexagonal example,
 
-![image](examples/figures/hexagon.png)
+![image](examples/figures/operations/initial.png)
 
 ```python
 mesh.insert_half_edge(0, 1)

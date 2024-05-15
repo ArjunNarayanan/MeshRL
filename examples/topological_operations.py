@@ -1,7 +1,11 @@
 import numpy as np
+import sys
+import os
+import argparse
+
+sys.path.append(os.getcwd())
 from src.tiler import Tiler
 from src.render import Renderer
-import os
 
 
 def generate_coordinates():
@@ -26,49 +30,62 @@ def initialize_graph():
     return graph
 
 
-graph = initialize_graph()
-renderer = Renderer(
-    graph,
-    coords=graph.vertex_coordinates,
-    label_vertices=True,
-    # label_halfedge=True,
-    vertex_size=40,
-    fontsize=35,
-    figsize=9
-)
-renderer.plot()
-output_dir = "examples/figures/operations"
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-output", help="output directory", default="examples/figures/operations")
+    parser.add_argument("-ext", help="output file extension", default="png")
+    args = parser.parse_args()
 
-figname = "initial.pdf"
-outputfile = os.path.join(output_dir, figname)
-renderer.fig.savefig(outputfile)
+    graph = initialize_graph()
+    renderer = Renderer(
+        graph,
+        coords=graph.vertex_coordinates,
+        label_vertices=True,
+        # label_halfedge=True,
+        vertex_size=40,
+        fontsize=35,
+        figsize=9
+    )
+    renderer.plot()
+    output_dir = args.output
+    extension = args.ext
 
-graph.insert_half_edge(0, 2)
-renderer.plot()
-figname = "insert-edge.pdf"
-outputfile = os.path.join(output_dir, figname)
-renderer.fig.savefig(outputfile)
+    print("\tGenerating initial geometry ...")
+    figname = "initial." + extension
+    outputfile = os.path.join(output_dir, figname)
+    renderer.fig.savefig(outputfile)
 
-graph.insert_vertex(6)
-renderer.plot()
-figname = "insert-vertex.pdf"
-outputfile = os.path.join(output_dir, figname)
-renderer.fig.savefig(outputfile)
+    print("\tEdge insert ...")
+    graph.insert_half_edge(0, 2)
+    renderer.plot()
+    figname = "insert-edge." + extension
+    outputfile = os.path.join(output_dir, figname)
+    renderer.fig.savefig(outputfile)
 
-graph.insert_half_edge(7, 1)
-renderer.plot()
-figname = "insert-edge2.pdf"
-outputfile = os.path.join(output_dir, figname)
-renderer.fig.savefig(outputfile)
+    figname = "insert-vertex." + extension
+    graph.insert_vertex(6)
+    renderer.plot()
+    print("\tVertex insert ...")
+    outputfile = os.path.join(output_dir, figname)
+    renderer.fig.savefig(outputfile)
 
-graph.delete_half_edge(6)
-renderer.plot()
-figname = "delete-edge.pdf"
-outputfile = os.path.join(output_dir, figname)
-renderer.fig.savefig(outputfile)
+    print("\tEdge insert ...")
+    graph.insert_half_edge(7, 1)
+    renderer.plot()
+    figname = "insert-edge2." + extension
+    outputfile = os.path.join(output_dir, figname)
+    renderer.fig.savefig(outputfile)
 
-graph.delete_source_vertex(11)
-renderer.plot()
-figname = "delete-vertex.pdf"
-outputfile = os.path.join(output_dir, figname)
-renderer.fig.savefig(outputfile)
+    print("\tEdge delete ...")
+    graph.delete_half_edge(6)
+    renderer.plot()
+    figname = "delete-edge." + extension
+    outputfile = os.path.join(output_dir, figname)
+    renderer.fig.savefig(outputfile)
+
+    print("\tVertex delete ...")
+    graph.delete_source_vertex(11)
+    renderer.plot()
+    figname = "delete-vertex." + extension
+    outputfile = os.path.join(output_dir, figname)
+    renderer.fig.savefig(outputfile)
