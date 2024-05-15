@@ -18,11 +18,13 @@ class AngleEnv(gym.Env):
             max_steps_factor=2,
             logdir=None,
             max_edge_addition_steps=3,
-            face_reward_weight=1 / 3,
-            angle_reward_weight=1 / 3,
-            vertex_reward_weight=1 / 3,
+            face_reward_weight=0.5,
+            angle_reward_weight=0.25,
+            vertex_reward_weight=0.25,
             use_boundary=False,
             smooth_iterations=5,
+            vertex_degree_threshold=10,
+            face_degree_threshold=10
     ):
         super().__init__()
         self.graph_initializer = graph_initializer
@@ -77,12 +79,13 @@ class AngleEnv(gym.Env):
         self.num_features = self.get_feature_size()
 
         self.action_space = Discrete(self.num_actions_per_half_edge)
-        self.vertex_degree_threshold = 3
-        self.face_degree_threshold = 10
+        self.vertex_degree_threshold = vertex_degree_threshold
+        self.face_degree_threshold = face_degree_threshold
+        features_max_val = max(self.vertex_degree_threshold, self.face_degree_threshold)
 
         self.observation_space = Dict(
             {
-                "features": Box(low=0, high=10, shape=(self.template_size, self.num_features)),
+                "features": Box(low=0, high=features_max_val, shape=(self.template_size, self.num_features)),
                 "next": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
                 "previous": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
                 "twin": Box(low=-2, high=self.template_size, shape=(self.template_size,), dtype=np.int64),
@@ -108,6 +111,9 @@ class AngleEnv(gym.Env):
         use_boundary = config.get("use_boundary", False)
         smooth_iterations = config.get("smooth_iterations", 5)
 
+        vertex_degree_threshold = config.get("vertex_degree_threshold", 10)
+        face_degree_threshold = config.get("face_degree_threshold", 10)
+
         return cls(
             face_desired_degree,
             graph_initializer,
@@ -119,7 +125,9 @@ class AngleEnv(gym.Env):
             angle_reward_weight=angle_reward_weight,
             vertex_reward_weight=vertex_reward_weight,
             use_boundary=use_boundary,
-            smooth_iterations=smooth_iterations
+            smooth_iterations=smooth_iterations,
+            vertex_degree_threshold=vertex_degree_threshold,
+            face_degree_threshold=face_degree_threshold
         )
 
     @staticmethod
@@ -181,6 +189,21 @@ class AngleEnv(gym.Env):
     def _update_global_vertex_score(self):
         self.global_vertex_score = self.global_l1_vertex_score()
 
+    def get_face_score(self):
+        return self.global_face_score
+
+    def get_vertex_score(self):
+        return self.global_vertex_score
+
+    def get_angle_score(self):
+        return self.global_angle_score
+
+    def get_score(self):
+        return self.score
+
+    def get_initial_score(self):
+        return self.initial_score
+
     def _update_scores_on_reset(self):
         self._update_global_face_score()
         self._update_global_angle_score()
@@ -192,9 +215,9 @@ class AngleEnv(gym.Env):
         self.min_score = self.score
 
         self.initial_score = self.score
-        self.initial_face_score = self.global_face_score
-        self.initial_angle_score = self.global_angle_score
-        self.initial_vertex_score = self.global_vertex_score
+        self.initial_face_score = max(self.global_face_score, 1)
+        self.initial_angle_score = max(self.global_angle_score, 1)
+        self.initial_vertex_score = max(self.global_vertex_score, 1)
 
         self.reward = 0
 
@@ -250,6 +273,9 @@ class AngleEnv(gym.Env):
         if self.num_steps >= self.max_steps:
             return True
 
+        if self.score == 0:
+            return True
+
         return False
 
     def _normalize_coordinates(self, coordinates):
@@ -272,20 +298,12 @@ class AngleEnv(gym.Env):
         coordinate_features = self._get_coordinate_features(source_vertices)
         vertex_desired_degree = [self.vertex_desired_degree[vidx] for vidx in source_vertices]
         vertex_irregularities = [
-            min((self.graph.vertex_degree(vidx) - vdesired) / vdesired, self.vertex_degree_threshold) for
-            vidx, vdesired in zip(source_vertices, vertex_desired_degree)
+            min(self.graph.vertex_degree(vidx), self.vertex_degree_threshold) for vidx in source_vertices
         ]
 
-        fdesired = self.face_desired_degree
-        face_irregularities = [
-            min((self.graph.face_degree(fidx) - fdesired) / fdesired, self.face_degree_threshold) for
-            fidx in faces
-        ]
+        face_irregularities = [min(self.graph.face_degree(fidx), self.face_degree_threshold) for fidx in faces]
 
-        angle_irregularities = [
-            (self.half_edge_angles[hidx] - self.desired_angle) / self.desired_angle for
-            hidx in self.index_to_half_edge
-        ]
+        angle_irregularities = [(self.half_edge_angles[hidx]) / self.desired_angle for hidx in self.index_to_half_edge]
 
         num_half_edges = len(self.index_to_half_edge)
 
@@ -443,7 +461,10 @@ class AngleEnv(gym.Env):
             self._step_delete_source_vertex(half_edge)
 
     def _get_reward(self):
-        return self.reward
+        if self.exception_occurred:
+            return 0
+        else:
+            return self.reward
 
     def _update_scores_on_step(self):
         prev_face_score = self.global_face_score

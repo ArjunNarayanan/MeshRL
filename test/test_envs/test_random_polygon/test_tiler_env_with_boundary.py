@@ -1,13 +1,15 @@
 from envs.random_polygon_tiler_env import RandomPolygonEnv
 import unittest
 import numpy as np
+from envs.environment_initializers import Hexagon
 
 
 class TestInsertHalfedge(unittest.TestCase):
     def setUp(self) -> None:
+        initializer = Hexagon(90)
         self.env = RandomPolygonEnv(
             3,
-            [6],
+            initializer,
             template_size=6,
             use_boundary=True,
             face_reward_weight=1,
@@ -175,9 +177,10 @@ class TestInsertHalfedge(unittest.TestCase):
 
 class TestHexEnvTemplate3(unittest.TestCase):
     def setUp(self) -> None:
+        initializer = Hexagon(60)
         self.env = RandomPolygonEnv(
             3,
-            [6],
+            initializer,
             template_size=3,
             use_boundary=True,
         )
@@ -216,9 +219,10 @@ class TestHexEnvTemplate3(unittest.TestCase):
 
 class TestObs4(unittest.TestCase):
     def setUp(self) -> None:
+        initializer = Hexagon(60)
         env = RandomPolygonEnv(
             3,
-            [6],
+            initializer,
             template_size=4,
             use_boundary=True,
         )
@@ -267,9 +271,10 @@ class TestObs4(unittest.TestCase):
 
 class TestObs5(unittest.TestCase):
     def setUp(self) -> None:
+        initializer = Hexagon(60)
         env = RandomPolygonEnv(
             3,
-            [6],
+            initializer,
             template_size=5,
             use_boundary=True
         )
@@ -323,9 +328,10 @@ class TestObs5(unittest.TestCase):
 
 class TestActionSequence(unittest.TestCase):
     def setUp(self) -> None:
+        initializer = Hexagon(60)
         env = RandomPolygonEnv(
             3,
-            [6],
+            initializer,
             template_size=18,
             use_boundary=True
         )
@@ -363,7 +369,7 @@ class TestActionSequence(unittest.TestCase):
 
         f = [5, 5, 5, 0, 5, 0, 5, 4, 0, 4, 4, 4, 4, 4, 4, 0, 4, 0]
         df = 3
-        ff = [fi/df for fi in f]
+        ff = [fi / df for fi in f]
         test_matrix[:, 2] = ff
 
         test_matrix[:, 3] = [3, 3, 3, 0, 3, 0, 3, 3, 0, 3, 3, 3, 3, 3, 3, 0, 3, 0]

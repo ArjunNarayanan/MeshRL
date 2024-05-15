@@ -4,7 +4,7 @@ from optuna.pruners import MedianPruner
 from optuna.samplers import TPESampler
 from optuna.storages import JournalStorage, JournalFileStorage
 from stable_baselines3 import PPO
-from stable_baselines3.common.callbacks import EvalCallback
+from src.average_best_eval_callback import AverageBestCallback
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import SubprocVecEnv
 import torch
@@ -66,26 +66,29 @@ def sample_ppo_params(trial: optuna.Trial):
     }
 
 
-class TrialEvalCallback(EvalCallback):
+class TrialEvalCallback(AverageBestCallback):
     """Callback used for evaluating and reporting a trial."""
 
     def __init__(
             self,
-            eval_env,
+            env_config,
             trial: optuna.Trial,
             eval_freq,
-            n_eval_episodes: int = 100,
+            trials_per_env=10,
+            trials_per_eval=20,
             deterministic: bool = False,
-            verbose: int = 0,
             best_model_save_path=None,
+            vec_env_class=SubprocVecEnv
     ):
         super().__init__(
-            eval_env=eval_env,
-            n_eval_episodes=n_eval_episodes,
+            env_config=env_config,
             eval_freq=eval_freq,
+            best_model_save_path=best_model_save_path,
+            vec_env_class=vec_env_class,
+            trials_per_env=trials_per_env,
+            trials_per_eval=trials_per_eval,
+            num_envs=NUM_ENVS,
             deterministic=deterministic,
-            verbose=verbose,
-            best_model_save_path=best_model_save_path
         )
         self.trial = trial
         self.eval_idx = 0
@@ -130,18 +133,14 @@ class Objective:
 
         model = PPO(**kwargs)
 
-        eval_env = make_vec_env(
-            lambda: initialize_environment(env_config),
-            NUM_ENVS
-        )
-
         eval_callback = TrialEvalCallback(
-            eval_env,
+            env_config,
             trial,
             eval_freq=EVAL_FREQ,
-            n_eval_episodes=N_EVAL_EPISODES,
+            trials_per_env=TRIALS_PER_ENV,
+            trials_per_eval=TRIALS_PER_EVAL,
             deterministic=False,
-            verbose=1,
+            vec_env_class=SubprocVecEnv
         )
 
         nan_encountered = False
@@ -154,7 +153,7 @@ class Objective:
         finally:
             # Free memory.
             model.env.close()
-            eval_env.close()
+            eval_callback.eval_env.close()
 
         # Tell the optimizer that the trial failed.
         if nan_encountered:
@@ -177,22 +176,23 @@ if __name__ == "__main__":
     config_filename = args.config
     gpu_id = args.gpu
     config = load_yaml_config(config_filename)
-    env_config = config["environment"]
 
     output_folder = os.path.dirname(config_filename)
     env_config = config["environment"]
     env_config["logdir"] = output_folder
 
     N_TRIALS = int(config["num_trials"])
-    N_STARTUP_TRIALS = 5
+    N_STARTUP_TRIALS = 10
     N_EVALUATIONS = 100
-    N_EVAL_EPISODES = 100
+    TRIALS_PER_ENV = 10
+    TRIALS_PER_EVAL = 20
     N_TIMESTEPS = int(config["total_timesteps"])
 
     print("EXPERIMENT START TIMESTAMP : ", datetime.datetime.now(), "\n\n")
 
     print("\nTotal timesteps : ", N_TIMESTEPS, "\n")
     EVAL_FREQ = int(N_TIMESTEPS / N_EVALUATIONS)
+    EVAL_FREQ = max(EVAL_FREQ // NUM_ENVS, 1)
     print("\nEval Freq : ", EVAL_FREQ, "\n")
     JOBID = os.environ.get("SLURM_JOB_ID")
 

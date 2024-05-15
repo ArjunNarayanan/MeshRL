@@ -5,7 +5,7 @@ from envs.environment_initializers import SquareHole
 
 class TestSquareHoleEnv(unittest.TestCase):
     def setUp(self) -> None:
-        initializer = SquareHole()
+        initializer = SquareHole(90)
         env = AngleEnv(4, initializer)
         env.template_center = (0, env.graph.half_edge_tag)
         env._build_template()

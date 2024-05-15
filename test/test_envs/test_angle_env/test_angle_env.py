@@ -6,7 +6,7 @@ from envs.environment_initializers import Hexagon
 
 class TestHexEnvInitial(unittest.TestCase):
     def setUp(self) -> None:
-        initializer = Hexagon()
+        initializer = Hexagon(60)
         self.env = AngleEnv(3, initializer, template_size=6)
 
         self.env.template_center = (3, self.env.graph.half_edge_tag)
@@ -35,7 +35,7 @@ class TestHexEnvInitial(unittest.TestCase):
 
 class TestHexEnvSteps(unittest.TestCase):
     def setUp(self) -> None:
-        initializer = Hexagon()
+        initializer = Hexagon(60)
         self.env = AngleEnv(3, initializer, template_size=8)
 
         self.env._step_insert_edge(5, 2)
@@ -51,7 +51,7 @@ class TestHexEnvSteps(unittest.TestCase):
 
 class TestCompositeActions(unittest.TestCase):
     def setUp(self) -> None:
-        initializer = Hexagon()
+        initializer = Hexagon(60)
         self.env = AngleEnv(
             3,
             initializer,

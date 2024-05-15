@@ -5,7 +5,7 @@ from envs.environment_initializers import CenterCrack
 
 class TestCenterCrack(unittest.TestCase):
     def setUp(self) -> None:
-        initializer = CenterCrack()
+        initializer = CenterCrack(90)
         env = AngleEnv(4, initializer, template_size=30, smooth_iterations=40)
 
         env.template_center = (0, env.graph.half_edge_tag)

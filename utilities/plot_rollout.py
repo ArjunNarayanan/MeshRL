@@ -43,8 +43,7 @@ def make_output_folder(dir):
 
 
 def plot_env(env, filename=None, plot_vertex_scores=False):
-    renderer = Renderer(env.graph, env.graph.vertex_coordinates, label_vertices=True)
-    renderer.coords = env.graph.vertex_coordinates
+    renderer = Renderer(env.graph, env.graph.vertex_coordinates)
     renderer.plot()
     if plot_vertex_scores:
         renderer.plot_vertex_scores(env.vertex_desired_degree)
@@ -95,14 +94,14 @@ def get_next_rollout_index():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-input", required=True)
+    parser.add_argument("-model", default="best_model.zip")
     parser.add_argument("-rollout", default=None)
-    # parser.add_argument("-degree", default=None, type=int)
     parser.add_argument("-scores", default=False, type=bool)
     parser.add_argument("-smooth", default=0, type=int)
+    parser.add_argument("-config", default="config.yml")
 
     args = parser.parse_args()
     input_folder = args.input
-    # polygon_degree = args.degree
     plot_vertex_scores = args.scores
     smooth_iterations = args.smooth
 
@@ -115,16 +114,18 @@ if __name__ == "__main__":
     else:
         rollout_index = args.rollout
 
-    config_fn = os.path.join(input_folder, "config.yml")
+    config_fn = os.path.join(input_folder, args.config)
     config = load_yaml_config(config_fn)
 
-    checkpoint = os.path.join(input_folder, "best_model.zip")
+    checkpoint = os.path.join(input_folder, args.model)
     model = load_model_from_checkpoint(checkpoint, config_fn)
 
     env_config = config["environment"]
 
     env = initialize_environment(env_config)
     max_steps = env.max_steps
-    NUM_DIGITS = int(math.log10(max_steps))
+    NUM_DIGITS = math.ceil(math.log10(max_steps))
+
+    print(NUM_DIGITS)
 
     plot_rollout(rollout_index, plot_vertex_scores=plot_vertex_scores)
