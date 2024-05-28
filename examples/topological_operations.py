@@ -41,9 +41,9 @@ if __name__ == "__main__":
         graph,
         coords=graph.vertex_coordinates,
         label_vertices=True,
-        # label_halfedge=True,
+        label_halfedge=True,
         vertex_size=40,
-        fontsize=35,
+        fontsize=25,
         figsize=9
     )
     renderer.plot()

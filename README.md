@@ -130,10 +130,34 @@ supports the following edit operations:
 `src.tiler.Tiler.insert_half_edge(hidx, k)` inserts a new edge between source of `hidx` and target of the halfedge that
 is `k` `next` operations ahead. Consider the hexagonal example,
 
-![image](examples/figures/operations/initial.png)
+<img src="examples/figures/operations/initial.png" alt="drawing" width="500"/>
 
 ```python
-mesh.insert_half_edge(0, 1)
+mesh.insert_half_edge(0, 2)
 ```
 
+<img src="examples/figures/operations/insert-edge.png" alt="drawing" width="500"/>
 
+```python
+mesh.insert_vertex(6)
+```
+
+<img src="examples/figures/operations/insert-vertex.png" alt="drawing" width="500"/>
+
+```python
+mesh.insert_half_edge(7, 1)
+```
+
+<img src="examples/figures/operations/insert-edge2.png" alt="drawing" width="500"/>
+
+```python
+mesh.delete_half_edge(6)
+```
+
+<img src="examples/figures/operations/delete-edge.png" alt="drawing" width="500"/>
+
+```python
+mesh.delete_source_vertex(11)
+```
+
+<img src="examples/figures/operations/delete-vertex.png" alt="drawing" width="500"/>
