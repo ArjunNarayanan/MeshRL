@@ -1,7 +1,7 @@
 from envs.environment_initializers import Hexagon
 from src.render import Renderer
 
-init = Hexagon()
+init = Hexagon(target_angle=np.pi / 3)
 mesh, _ = init()
 
 mesh.insert_half_edge(0, 2)

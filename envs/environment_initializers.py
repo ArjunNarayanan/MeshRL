@@ -76,6 +76,22 @@ class FixedRandomPolygon:
 
 
 class Hexagon:
+    """
+    Represents a regular hexagon environment initializer for tiling and polygon experiments.
+
+    This class generates the coordinates and desired vertex degrees for a regular hexagon,
+    parameterized by a target angle. It can be used to create a graph representation of a hexagon
+    with associated desired degrees for each vertex, suitable for mesh or tiling algorithms.
+
+    Args:
+        target_angle (float): The target angle (in degrees) to which the interior angles of the hexagon's vertices are rounded.
+
+    Methods:
+        generate_coordinates():
+            Static method that returns the coordinates of the hexagon's vertices as a dictionary.
+        __call__():
+            Generates the hexagon graph and the desired degree dictionary for each vertex.
+    """
     def __init__(self, target_angle):
         self.target_angle = target_angle
 
