@@ -4,6 +4,7 @@ from collections import deque
 import numpy as np
 import scipy as sp
 import warnings
+from typing import Optional, Sequence
 
 
 def induced_angle(v1, v2):
@@ -558,7 +559,7 @@ class Tiler(nx.MultiGraph):
         else:
             return None
 
-    def create_vertex(self, coord=None, on_boundary=False):
+    def create_vertex(self, coord: Optional[np.ndarray] = None, on_boundary: bool = False) -> tuple[int, str]:
         new_vertex_idx = (self.next_vertex_index, self.vertex_tag)
         self.add_node(new_vertex_idx, type="vertex")
 
