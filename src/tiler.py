@@ -564,7 +564,7 @@ class Tiler(nx.MultiGraph):
         self.add_node(new_vertex_idx, type="vertex")
 
         if coord is not None and self.vertex_coordinates is not None:
-            # assert len(coord) == 2
+            assert len(coord) == 2
             self.vertex_coordinates[self.next_vertex_index] = coord
 
         if on_boundary:
@@ -602,7 +602,7 @@ class Tiler(nx.MultiGraph):
         self.add_edge(hidx, vidx, key="target")
         self.add_edge(twin_edge, vidx, key="source")
 
-    def _insert_boundary_vertex(self, hidx):
+    def _insert_boundary_vertex(self, hidx, new_vertex_coord = None):
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
         assert self.is_half_edge(hidx)
         assert self.half_edge_on_boundary(hidx)
@@ -610,7 +610,9 @@ class Tiler(nx.MultiGraph):
         current_target_vertex = self.target_vertex(hidx)
         current_source_vertex = self.source_vertex(hidx)
 
-        new_vertex_coord = self.get_new_vertex_coordinate(current_target_vertex, current_source_vertex)
+        if new_vertex_coord is None:
+            new_vertex_coord = self.get_new_vertex_coordinate(current_target_vertex, current_source_vertex)
+        
         new_vertex_idx = self.create_vertex(new_vertex_coord, on_boundary=True)
         self.set_vertex_degree(new_vertex_idx, 2)
 
@@ -626,7 +628,7 @@ class Tiler(nx.MultiGraph):
 
         return new_vertex_idx
 
-    def _insert_interior_vertex(self, hidx):
+    def _insert_interior_vertex(self, hidx, new_vertex_coord = None):
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
         assert self.is_half_edge(hidx)
         assert not self.half_edge_on_boundary(hidx)
@@ -637,7 +639,10 @@ class Tiler(nx.MultiGraph):
 
         current_target_vertex = self.target_vertex(hidx)
         current_source_vertex = self.source_vertex(hidx)
-        new_vertex_coord = self.get_new_vertex_coordinate(current_target_vertex, current_source_vertex)
+        
+        if new_vertex_coord is None:
+            new_vertex_coord = self.get_new_vertex_coordinate(current_target_vertex, current_source_vertex)
+        
         new_vertex_idx = self.create_vertex(new_vertex_coord, on_boundary=False)
         self.set_vertex_degree(new_vertex_idx, 2)
 
@@ -654,13 +659,13 @@ class Tiler(nx.MultiGraph):
 
         return new_vertex_idx
 
-    def insert_vertex(self, hidx):
+    def insert_vertex(self, hidx, new_vertex_coord = None):
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
         assert self.is_half_edge(hidx)
         if self.half_edge_on_boundary(hidx):
-            new_vertex = self._insert_boundary_vertex(hidx)
+            new_vertex = self._insert_boundary_vertex(hidx, new_vertex_coord)
         else:
-            new_vertex = self._insert_interior_vertex(hidx)
+            new_vertex = self._insert_interior_vertex(hidx,new_vertex_coord)
 
     def _delete_vertex_metadata(self, vidx):
         vidx = self._ensure_untagged_form(vidx)

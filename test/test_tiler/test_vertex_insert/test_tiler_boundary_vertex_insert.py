@@ -1,5 +1,6 @@
 from src.tiler import Tiler
 import unittest
+import numpy as np
 
 
 def initialize_triangle_graph():
@@ -129,6 +130,18 @@ class TestInsertVertex(unittest.TestCase):
     def test_face_degree(self):
         self.assertEqual(self.graph.face_degree(0), 4)
 
+
+class TestInsertVertexWithCoord(unittest.TestCase):
+    def test_insert_vertex_with_coord(self):
+        graph = initialize_triangle_graph()
+        coord = np.array([0.5, 0.5])
+
+        graph.insert_vertex(0, coord)
+
+        np.testing.assert_almost_equal(graph.vertex_coordinate(3), coord)
+
+
+        
 
 if __name__ == "__main__":
     unittest.main()
