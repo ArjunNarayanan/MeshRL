@@ -8,3 +8,4 @@ job_scripts/
 *.db
 *.pkl
 *.pdf
+venv/*
