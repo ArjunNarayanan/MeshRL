@@ -6,10 +6,30 @@ import scipy as sp
 import warnings
 from typing import Optional, Sequence
 
+UNTAGGED_INDEX_TYPE = int
+TAG_TYPE = str
+TAGGED_INDEX_TYPE = tuple[UNTAGGED_INDEX_TYPE, TAG_TYPE]
+UNION_INDEX_TYPE = TAGGED_INDEX_TYPE | UNTAGGED_INDEX_TYPE
 
-def induced_angle(v1, v2):
+
+def induced_angle(v1: np.ndarray, v2: np.ndarray):
+    """
+    Compute the induced angle(s) in degrees between two sets of 2D vectors.
+
+    Parameters
+    ----------
+    v1 : np.ndarray
+        An (N, 2) array of N 2D vectors.
+    v2 : np.ndarray
+        An (N, 2) array of N 2D vectors.
+
+    Returns
+    -------
+    np.ndarray
+        An array of angles in degrees, in the range [0, 360).
+    """
     dotp = (v1 * v2).sum(axis=1)
-    detp = (v1[:, 0] * v2[:, 1] - v1[:, 1] * v2[:, 0])
+    detp = v1[:, 0] * v2[:, 1] - v1[:, 1] * v2[:, 0]
     angle = np.degrees(np.arctan2(detp, dotp))
     angle[angle < 0] += 360
     return angle
@@ -17,14 +37,14 @@ def induced_angle(v1, v2):
 
 class HalfEdge:
     def __init__(
-            self,
-            id,
-            face=None,
-            next=None,
-            previous=None,
-            twin=None,
-            source=None,
-            target=None
+        self,
+        id: TAGGED_INDEX_TYPE,
+        face: TAGGED_INDEX_TYPE | None = None,
+        next: TAGGED_INDEX_TYPE | None = None,
+        previous: TAGGED_INDEX_TYPE | None = None,
+        twin: TAGGED_INDEX_TYPE | None = None,
+        source: TAGGED_INDEX_TYPE | None = None,
+        target: TAGGED_INDEX_TYPE | None = None,
     ):
         self.id = id
         self.face = face
@@ -38,26 +58,36 @@ class HalfEdge:
 class Tiler(nx.MultiGraph):
     def __init__(self):
         super().__init__()
-        self.next_half_edge_index = 0
-        self.next_vertex_index = 0
-        self.next_face_index = 0
-        self.next_boundary_index = 0
+        self.next_half_edge_index: int = 0
+        self.next_vertex_index: int = 0
+        self.next_face_index: int = 0
+        self.next_boundary_index: int = 0
 
-        self.half_edge_tag = "h"
-        self.vertex_tag = "v"
-        self.face_tag = "f"
-        self.boundary_tag = "b"
+        self.half_edge_tag: str = "h"
+        self.vertex_tag: str = "v"
+        self.face_tag: str = "f"
+        self.boundary_tag: str = "b"
 
-        self.vertex_coordinates = None
-        self.user_defined_vertices = set()
-        self.boundary_vertices = set()
+        self.vertex_coordinates: dict[TAGGED_INDEX_TYPE, np.ndarray] = None
 
-        self.half_edges = dict()
-        self.vertex_degrees = dict()
-        self.face_degrees = dict()
+        # TODO: would be nice to have this in tagged form for consistency
+        self.user_defined_vertices: set[UNTAGGED_INDEX_TYPE] = set()
+        # TODO: would be nice to have this in tagged form for consistency
+        self.boundary_vertices: set[UNTAGGED_INDEX_TYPE] = set()
+
+        self.half_edges: dict[TAGGED_INDEX_TYPE, HalfEdge] = dict()
+        self.vertex_degrees: dict[TAGGED_INDEX_TYPE, int] = dict()
+        self.face_degrees: dict[TAGGED_INDEX_TYPE, int] = dict()
 
     @classmethod
-    def from_face_loops(cls, face_loops, vertex_coordinates=None, user_vertices=None):
+    def from_face_loops(
+        cls,
+        face_loops: list[list[int]],
+        vertex_coordinates: dict[int, Sequence[float]] = None,
+        user_vertices: set[
+            int
+        ] = None,  # TODO: Change this to any Sequence and cast type appropriately
+    ):
         graph = cls()
 
         num_faces = len(face_loops)
@@ -67,7 +97,8 @@ class Tiler(nx.MultiGraph):
 
         if vertex_coordinates is not None:
             assert all(
-                v in vertex_coordinates for v in vertex_ids), "Some vertices were not found in vertex_coordinates"
+                v in vertex_coordinates for v in vertex_ids
+            ), "Some vertices were not found in vertex_coordinates"
             for k, v in vertex_coordinates.items():
                 vertex_coordinates[k] = np.array(v, dtype=float)
 
@@ -83,7 +114,9 @@ class Tiler(nx.MultiGraph):
         graph.next_face_index = num_faces
         graph.next_boundary_index = 0
 
-        half_edge_ids = [(idx, graph.half_edge_tag) for idx in range(graph.next_half_edge_index)]
+        half_edge_ids = [
+            (idx, graph.half_edge_tag) for idx in range(graph.next_half_edge_index)
+        ]
         graph.add_nodes_from(half_edge_ids, type="half_edge")
         half_edges = [HalfEdge(hidx) for hidx in half_edge_ids]
         graph.half_edges = dict(zip(half_edge_ids, half_edges))
@@ -106,77 +139,108 @@ class Tiler(nx.MultiGraph):
 
         return graph
 
-    def is_user_defined_vertex(self, vidx):
+    def is_user_defined_vertex(self, vidx: UNION_INDEX_TYPE) -> bool:
         vidx = self._ensure_untagged_form(vidx)
         return vidx in self.user_defined_vertices
 
-    def associate_previous_next_half_edge(self, previous_hidx, next_hidx):
+    def associate_previous_next_half_edge(
+        self, previous_hidx: UNION_INDEX_TYPE, next_hidx: UNION_INDEX_TYPE
+    ) -> None:
         previous_hidx = self._ensure_tag_form(previous_hidx, self.half_edge_tag)
         next_hidx = self._ensure_tag_form(next_hidx, self.half_edge_tag)
 
         self.half_edges[previous_hidx].next = next_hidx
         self.half_edges[next_hidx].previous = previous_hidx
 
-    def associate_half_edge_source_vertex(self, hidx, vidx):
+    def associate_half_edge_source_vertex(
+        self, hidx: UNION_INDEX_TYPE, vidx: UNION_INDEX_TYPE
+    ) -> None:
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
         vidx = self._ensure_tag_form(vidx, self.vertex_tag)
 
         self.half_edges[hidx].source = vidx
         self.add_edge(hidx, vidx, key="source")
 
-    def associate_half_edge_target_vertex(self, hidx, vidx):
+    def associate_half_edge_target_vertex(
+        self, hidx: UNION_INDEX_TYPE, vidx: UNION_INDEX_TYPE
+    ) -> None:
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
         vidx = self._ensure_tag_form(vidx, self.vertex_tag)
 
         self.half_edges[hidx].target = vidx
         self.add_edge(hidx, vidx, key="target")
 
-    def associate_half_edge_face(self, hidx, fidx):
+    def associate_half_edge_face(
+        self, hidx: UNION_INDEX_TYPE, fidx: UNION_INDEX_TYPE
+    ) -> None:
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
         fidx = self._ensure_tag_form(fidx, self.face_tag)
 
         self.half_edges[hidx].face = fidx
         self.add_edge(hidx, fidx, key="face")
 
-    def associate_half_edge_twin(self, hidx, twin_hidx):
+    def associate_half_edge_twin(
+        self, hidx: UNION_INDEX_TYPE, twin_hidx: UNION_INDEX_TYPE
+    ) -> None:
         hidx = self._ensure_tag_form(hidx, self.half_edge_tag)
         twin_hidx = self._ensure_tag_form(twin_hidx, self.half_edge_tag)
 
         self.half_edges[hidx].twin = twin_hidx
         self.half_edges[twin_hidx].twin = hidx
 
-    def _add_face_loop(self, source_half_edges, next_half_edges):
+    def _add_face_loop(
+        self,
+        source_half_edges: list[UNTAGGED_INDEX_TYPE],
+        next_half_edges: list[UNTAGGED_INDEX_TYPE],
+    ) -> None:
         assert len(source_half_edges) == len(next_half_edges)
         assert next_half_edges[-1] == source_half_edges[0]
 
-        source_edges_with_tags = [(idx, self.half_edge_tag) for idx in source_half_edges]
+        # TODO: we should probably check whether the inputs are in tagged or untagged form
+        source_edges_with_tags = [
+            (idx, self.half_edge_tag) for idx in source_half_edges
+        ]
         next_edges_with_tags = [(idx, self.half_edge_tag) for idx in next_half_edges]
 
         for src_hidx, next_hidx in zip(source_edges_with_tags, next_edges_with_tags):
             self.associate_previous_next_half_edge(src_hidx, next_hidx)
 
-    def add_sequential_face_loop(self, half_edge_start, half_edge_stop):
+    # TODO: make these private methods since it makes strong assumptions
+    def add_sequential_face_loop(
+        self, half_edge_start: UNTAGGED_INDEX_TYPE, half_edge_stop: UNTAGGED_INDEX_TYPE
+    ) -> None:
         # !ASSUMES THAT HALF EDGES IN A FACE LOOP ARE INDEXED SEQUENTIALLY!
         assert half_edge_stop - half_edge_start + 1 > 1
         source_indices = list(range(half_edge_start, half_edge_stop + 1))
         next_indices = source_indices[1:] + [source_indices[0]]
         self._add_face_loop(source_indices, next_indices)
 
-    def initialize_half_edges_from_face_loops(self, face_loops):
+    # TODO: make these private methods since it makes strong assumptions
+    def initialize_half_edges_from_face_loops(
+        self, face_loops: list[list[UNTAGGED_INDEX_TYPE]]
+    ) -> None:
         start = 0
         for loop in face_loops:
             stop = start + len(loop) - 1
             self.add_sequential_face_loop(start, stop)
             start = stop + 1
 
-    def initialize_half_edge_source_associations(self, face_loops):
-        source_vertices = [(v, self.vertex_tag) for v in itertools.chain.from_iterable(face_loops)]
+    # TODO: make these private methods since it makes strong assumptions
+    def initialize_half_edge_source_associations(
+        self, face_loops: list[list[UNTAGGED_INDEX_TYPE]]
+    ) -> None:
+        source_vertices = [
+            (v, self.vertex_tag) for v in itertools.chain.from_iterable(face_loops)
+        ]
         half_edge_ids = [(h, self.half_edge_tag) for h in range(len(source_vertices))]
 
         for hidx, vidx in zip(half_edge_ids, source_vertices):
             self.associate_half_edge_source_vertex(hidx, vidx)
 
-    def initialize_half_edge_target_associations(self, face_loops):
+    # TODO: make these private methods since it makes strong assumptions
+    def initialize_half_edge_target_associations(
+        self, face_loops: list[list[UNTAGGED_INDEX_TYPE]]
+    ) -> None:
         target_vertices = []
         for loop in face_loops:
             rotated_loop = loop[1:] + [loop[0]]
@@ -188,7 +252,10 @@ class Tiler(nx.MultiGraph):
         for hidx, vidx in zip(half_edge_ids, target_vertices):
             self.associate_half_edge_target_vertex(hidx, vidx)
 
-    def initialize_half_edge_face_associations(self, face_loops):
+    # TODO: make these private methods since it makes strong assumptions
+    def initialize_half_edge_face_associations(
+        self, face_loops: list[list[UNTAGGED_INDEX_TYPE]]
+    ) -> None:
         face_ids = []
         for face_idx, loop in enumerate(face_loops):
             loop_face_ids = len(loop) * [face_idx]
@@ -201,7 +268,7 @@ class Tiler(nx.MultiGraph):
             self.associate_half_edge_face(hidx, fidx)
 
     @staticmethod
-    def _ensure_tag_form(idx, tag):
+    def _ensure_tag_form(idx: UNION_INDEX_TYPE, tag: TAG_TYPE) -> TAGGED_INDEX_TYPE:
         if isinstance(idx, tuple):
             # assert len(idx) == 2
             return idx
@@ -209,15 +276,21 @@ class Tiler(nx.MultiGraph):
             return idx, tag
 
     @staticmethod
-    def _ensure_untagged_form(idx):
+    def _ensure_untagged_form(idx: UNION_INDEX_TYPE) -> UNTAGGED_INDEX_TYPE:
         if isinstance(idx, tuple):
             return idx[0]
         else:
             return idx
 
-    def initialize_twin_associations(self):
-        half_edge_nodes = [(h, self.half_edge_tag) for h in range(self.next_half_edge_index)]
-        src_target = [(self.source_vertex(h), self.target_vertex(h)) for h in half_edge_nodes]
+    def initialize_twin_associations(self) -> None:
+        half_edge_nodes = [
+            (h, self.half_edge_tag) for h in range(self.next_half_edge_index)
+        ]
+        src_target = [
+            (self.source_vertex(h), self.target_vertex(h)) for h in half_edge_nodes
+        ]
+
+        # TODO: check that no duplicates
         src_target_to_half_edge = dict(zip(src_target, half_edge_nodes))
         boundary_nodes = []
         boundary_count = 0
@@ -238,7 +311,7 @@ class Tiler(nx.MultiGraph):
         self.next_boundary_index = boundary_count
         self.add_nodes_from(boundary_nodes, type="boundary")
 
-    def initialize_boundary_source_target_associations(self):
+    def initialize_boundary_source_target_associations(self) -> None:
         boundary_nodes = [node for node in self.nodes() if node[1] == self.boundary_tag]
         boundary_source = []
         boundary_target = []
@@ -253,7 +326,7 @@ class Tiler(nx.MultiGraph):
             boundary_source.append(twin_target)
             boundary_target.append(twin_source)
 
-    def initialize_vertex_degrees(self):
+    def initialize_vertex_degrees(self) -> None:
         vertices = self.vertex_list(tag=True)
         degrees = self.vertex_degree_of_list(vertices)
         self.vertex_degrees.update(zip(vertices, degrees))
@@ -270,7 +343,9 @@ class Tiler(nx.MultiGraph):
         self.face_degrees.update(zip(faces, degrees))
 
     def _number_of_nodes(self, type):
-        return sum(1 for vert, data in self.nodes(data=True) if data.get("type") == type)
+        return sum(
+            1 for vert, data in self.nodes(data=True) if data.get("type") == type
+        )
 
     def number_of_half_edges(self):
         return self._number_of_nodes("half_edge")
@@ -285,7 +360,11 @@ class Tiler(nx.MultiGraph):
         return sum(1 for src, dst, key in self.edges(keys=True) if key == type)
 
     def _node_list_by_type(self, node_type, tag):
-        nodes = [node for node, data in self.nodes(data=True) if data.get("type") == node_type]
+        nodes = [
+            node
+            for node, data in self.nodes(data=True)
+            if data.get("type") == node_type
+        ]
         if not tag:
             nodes = [self._ensure_untagged_form(idx) for idx in nodes]
         return nodes
@@ -362,8 +441,13 @@ class Tiler(nx.MultiGraph):
         return degree
 
     def vertex_degree_of_list(self, vertex_list):
-        vertex_list = [self._ensure_tag_form(vidx, self.vertex_tag) for vidx in vertex_list]
+        vertex_list = [
+            self._ensure_tag_form(vidx, self.vertex_tag) for vidx in vertex_list
+        ]
+        # every mesh edge incident on a vertex will correspond to two half-edges in the 
+        # half-edge graph structure. So find the graph degree and divide by two
         degree_dict = self.degree(vertex_list)
+        # TODO: check that the degrees are all even
         degrees = [degree_dict[vidx] // 2 for vidx in vertex_list]
         return degrees
 
@@ -401,7 +485,9 @@ class Tiler(nx.MultiGraph):
 
     def first_face_halfedge(self, face_idx, tag=True):
         face_idx = self._ensure_tag_form(face_idx, self.face_tag)
-        halfedge = next(h for f, h, key in self.edges(face_idx, keys=True) if key == "face")
+        halfedge = next(
+            h for f, h, key in self.edges(face_idx, keys=True) if key == "face"
+        )
         if tag:
             return halfedge
         else:
@@ -446,12 +532,18 @@ class Tiler(nx.MultiGraph):
         self.face_degrees[fidx] = degree
 
     def create_half_edge(self, next_half_edge_idx, prev_half_edge_idx):
-        next_half_edge_idx = self._ensure_tag_form(next_half_edge_idx, self.half_edge_tag)
-        prev_half_edge_idx = self._ensure_tag_form(prev_half_edge_idx, self.half_edge_tag)
+        next_half_edge_idx = self._ensure_tag_form(
+            next_half_edge_idx, self.half_edge_tag
+        )
+        prev_half_edge_idx = self._ensure_tag_form(
+            prev_half_edge_idx, self.half_edge_tag
+        )
 
         next_half_edge = self.half_edges[next_half_edge_idx]
         prev_half_edge = self.half_edges[prev_half_edge_idx]
-        assert next_half_edge.face == prev_half_edge.face, "next/previous edges must share face"
+        assert (
+            next_half_edge.face == prev_half_edge.face
+        ), "next/previous edges must share face"
 
         source_vertex = prev_half_edge.target
         target_vertex = next_half_edge.source
@@ -466,7 +558,7 @@ class Tiler(nx.MultiGraph):
             next=next_half_edge_idx,
             previous=prev_half_edge_idx,
             source=source_vertex,
-            target=target_vertex
+            target=target_vertex,
         )
         self.half_edges[new_half_edge_idx] = new_half_edge
         self.add_node(new_half_edge_idx, type="half_edge")
@@ -489,9 +581,7 @@ class Tiler(nx.MultiGraph):
 
         self.add_node(boundary_edge_idx, type="boundary")
         boundary_edge = HalfEdge(
-            boundary_edge_idx,
-            source=source_vertex,
-            target=target_vertex
+            boundary_edge_idx, source=source_vertex, target=target_vertex
         )
         self.half_edges[boundary_edge_idx] = boundary_edge
 
@@ -559,7 +649,9 @@ class Tiler(nx.MultiGraph):
         else:
             return None
 
-    def create_vertex(self, coord: Optional[np.ndarray] = None, on_boundary: bool = False) -> tuple[int, str]:
+    def create_vertex(
+        self, coord: Optional[np.ndarray] = None, on_boundary: bool = False
+    ) -> tuple[int, str]:
         new_vertex_idx = (self.next_vertex_index, self.vertex_tag)
         self.add_node(new_vertex_idx, type="vertex")
 
@@ -610,7 +702,9 @@ class Tiler(nx.MultiGraph):
         current_target_vertex = self.target_vertex(hidx)
         current_source_vertex = self.source_vertex(hidx)
 
-        new_vertex_coord = self.get_new_vertex_coordinate(current_target_vertex, current_source_vertex)
+        new_vertex_coord = self.get_new_vertex_coordinate(
+            current_target_vertex, current_source_vertex
+        )
         new_vertex_idx = self.create_vertex(new_vertex_coord, on_boundary=True)
         self.set_vertex_degree(new_vertex_idx, 2)
 
@@ -618,7 +712,9 @@ class Tiler(nx.MultiGraph):
         self.set_target_vertex(hidx, new_vertex_idx)
 
         new_half_edge = self.create_half_edge(next_half_edge, hidx)
-        new_boundary_edge = self.create_boundary_half_edge(new_vertex_idx, current_target_vertex)
+        new_boundary_edge = self.create_boundary_half_edge(
+            new_vertex_idx, current_target_vertex
+        )
         self.associate_half_edge_twin(new_half_edge, new_boundary_edge)
 
         face_idx = self.face(hidx)
@@ -637,7 +733,9 @@ class Tiler(nx.MultiGraph):
 
         current_target_vertex = self.target_vertex(hidx)
         current_source_vertex = self.source_vertex(hidx)
-        new_vertex_coord = self.get_new_vertex_coordinate(current_target_vertex, current_source_vertex)
+        new_vertex_coord = self.get_new_vertex_coordinate(
+            current_target_vertex, current_source_vertex
+        )
         new_vertex_idx = self.create_vertex(new_vertex_coord, on_boundary=False)
         self.set_vertex_degree(new_vertex_idx, 2)
 
@@ -758,7 +856,9 @@ class Tiler(nx.MultiGraph):
         return True
 
     def delete_source_vertex(self, hidx):
-        assert self.is_valid_delete_source_vertex(hidx), "cannot delete vertex at source of : " + str(hidx)
+        assert self.is_valid_delete_source_vertex(
+            hidx
+        ), "cannot delete vertex at source of : " + str(hidx)
         if self.half_edge_on_boundary(hidx):
             self._delete_boundary_vertex(hidx)
         else:
@@ -773,7 +873,10 @@ class Tiler(nx.MultiGraph):
 
         source_vertex = self.source_vertex(hidx)
         target_vertex = self.target_vertex(hidx)
-        if self.vertex_degree(source_vertex) <= 2 or self.vertex_degree(target_vertex) <= 2:
+        if (
+            self.vertex_degree(source_vertex) <= 2
+            or self.vertex_degree(target_vertex) <= 2
+        ):
             return False
 
         # Deleting a half-edge results in merging of faces on either side.
@@ -788,7 +891,9 @@ class Tiler(nx.MultiGraph):
 
     def _half_edges_of_face(self, fidx):
         fidx = self._ensure_tag_form(fidx, self.face_tag)
-        edges = (target for src, target, key in self.edges(fidx, keys=True) if key == "face")
+        edges = (
+            target for src, target, key in self.edges(fidx, keys=True) if key == "face"
+        )
         return edges
 
     def delete_half_edge(self, hidx):
@@ -832,7 +937,9 @@ class Tiler(nx.MultiGraph):
 
         current_half_edge = hidx
         for step in range(max_steps):
-            current_half_edge = self.next_half_edge(self.next_half_edge(current_half_edge))
+            current_half_edge = self.next_half_edge(
+                self.next_half_edge(current_half_edge)
+            )
             if self.half_edge_on_boundary(current_half_edge):
                 return True
             current_half_edge = self.twin_half_edge(current_half_edge)
@@ -866,7 +973,9 @@ class Tiler(nx.MultiGraph):
             num_steps += 1
 
         if not self.is_boundary_half_edge(hidx):
-            message = "Global split from " + str(original_hidx), " terminated in interior at " + str(hidx)
+            message = "Global split from " + str(
+                original_hidx
+            ), " terminated in interior at " + str(hidx)
             warnings.warn(message)
 
     def _get_global_line_half_edges(self, hidx, max_steps):
@@ -875,16 +984,16 @@ class Tiler(nx.MultiGraph):
 
         def increment_half_edge(hidx):
             next_half_edge = self.twin_half_edge(
-                self.next_half_edge(
-                    self.next_half_edge(hidx)
-                )
+                self.next_half_edge(self.next_half_edge(hidx))
             )
             return next_half_edge
 
         num_steps = 0
         current_half_edge = increment_half_edge(hidx)
 
-        while num_steps < max_steps and not self.is_boundary_half_edge(current_half_edge):
+        while num_steps < max_steps and not self.is_boundary_half_edge(
+            current_half_edge
+        ):
             half_edges.append(current_half_edge)
             current_half_edge = increment_half_edge(current_half_edge)
             num_steps += 1
@@ -986,7 +1095,9 @@ class Tiler(nx.MultiGraph):
                 if not self.is_user_defined_vertex(dst):
                     update_row_col_val(dst, src, 1.0)
             else:
-                if (not self.is_boundary_vertex(src)) and (not self.is_user_defined_vertex(src)):
+                if (not self.is_boundary_vertex(src)) and (
+                    not self.is_user_defined_vertex(src)
+                ):
                     update_row_col_val(src, dst, 1.0)
 
         # Set all user defined vertices to have same coords
@@ -994,7 +1105,9 @@ class Tiler(nx.MultiGraph):
             if self.is_user_defined_vertex(vidx):
                 update_row_col_val(idx, idx, 1.0)
 
-        matrix = sp.sparse.csr_matrix((values, (row_indices, col_indices)), shape=(num_verts, num_verts))
+        matrix = sp.sparse.csr_matrix(
+            (values, (row_indices, col_indices)), shape=(num_verts, num_verts)
+        )
         return matrix
 
     def _get_vertex_degrees_for_smoothing(self, index2vertex):
@@ -1016,7 +1129,9 @@ class Tiler(nx.MultiGraph):
 
         matrix = self._construct_sparse_vertex_laplace_operator(vertex2index)
         coordinates = np.array([self.vertex_coordinate(vidx) for vidx in index2vertex])
-        degrees = np.array(self._get_vertex_degrees_for_smoothing(index2vertex)).reshape(-1, 1)
+        degrees = np.array(
+            self._get_vertex_degrees_for_smoothing(index2vertex)
+        ).reshape(-1, 1)
 
         for step in range(num_iter):
             coordinates = matrix @ coordinates
@@ -1041,7 +1156,9 @@ class Tiler(nx.MultiGraph):
         for idx, hidx in enumerate(half_edges):
             half_edge_source[idx] = vertex2index[self.source_vertex(hidx, tag=False)]
             half_edge_next[idx] = vertex2index[self.target_vertex(hidx, tag=False)]
-            half_edge_prev[idx] = vertex2index[self.source_vertex(self.previous_half_edge(hidx), tag=False)]
+            half_edge_prev[idx] = vertex2index[
+                self.source_vertex(self.previous_half_edge(hidx), tag=False)
+            ]
 
         C = coordinates[half_edge_source]
         N = coordinates[half_edge_next]
@@ -1107,7 +1224,7 @@ def _get_connectivity_representation(tiler: Tiler, face_degree):
         "coordinates": coordinates,
         "edges": edges,
         "edge connectivity": face2edge,
-        "user vertices": user_vertices
+        "user vertices": user_vertices,
     }
     return representation
 
@@ -1122,14 +1239,18 @@ def quad_connectivity_representation(tiler: Tiler):
     return _get_connectivity_representation(tiler, 4)
 
 
-def _refine_triangles(vertex_coordinates, edges, vertex_connectivity, edge_connectivity):
+def _refine_triangles(
+    vertex_coordinates, edges, vertex_connectivity, edge_connectivity
+):
     assert vertex_coordinates.shape[1] == 2
     assert edges.shape[1] == 2
     assert vertex_connectivity.shape[1] == 3
     assert edge_connectivity.shape[1] == 3
 
     # get mid-point of edges
-    midpoint_coords = 0.5 * (vertex_coordinates[edges[:, 0]] + vertex_coordinates[edges[:, 1]])
+    midpoint_coords = 0.5 * (
+        vertex_coordinates[edges[:, 0]] + vertex_coordinates[edges[:, 1]]
+    )
     vertex_offset = vertex_coordinates.shape[0]
 
     v0 = vertex_connectivity[:, 0]
@@ -1159,14 +1280,16 @@ def _refine_quads(vertex_coordinates, edges, vertex_connectivity, edge_connectiv
     assert edge_connectivity.shape[1] == 4
 
     # get mid-point of edges
-    edge_midpoint_coords = 0.5 * (vertex_coordinates[edges[:, 0]] + vertex_coordinates[edges[:, 1]])
+    edge_midpoint_coords = 0.5 * (
+        vertex_coordinates[edges[:, 0]] + vertex_coordinates[edges[:, 1]]
+    )
 
     # get face centroids
     face_centroids = 0.25 * (
-            vertex_coordinates[vertex_connectivity[:, 0]] +
-            vertex_coordinates[vertex_connectivity[:, 1]] +
-            vertex_coordinates[vertex_connectivity[:, 2]] +
-            vertex_coordinates[vertex_connectivity[:, 3]]
+        vertex_coordinates[vertex_connectivity[:, 0]]
+        + vertex_coordinates[vertex_connectivity[:, 1]]
+        + vertex_coordinates[vertex_connectivity[:, 2]]
+        + vertex_coordinates[vertex_connectivity[:, 3]]
     )
 
     # edge midpoint vertices and face centroid vertices' indices need to be offset
@@ -1193,11 +1316,7 @@ def _refine_quads(vertex_coordinates, edges, vertex_connectivity, edge_connectiv
 
     new_vertex_connectivity = np.vstack([block1, block2, block3, block4])
     new_coordinates = np.vstack(
-        [
-            vertex_coordinates,
-            edge_midpoint_coords,
-            face_centroids
-        ]
+        [vertex_coordinates, edge_midpoint_coords, face_centroids]
     )
 
     return new_coordinates, new_vertex_connectivity
@@ -1209,7 +1328,9 @@ def refine(tiler: Tiler, face_degree):
     elif face_degree == 4:
         representation = quad_connectivity_representation(tiler)
     else:
-        raise ValueError("Expected face degree in {3,4} got face degree = ", face_degree)
+        raise ValueError(
+            "Expected face degree in {3,4} got face degree = ", face_degree
+        )
 
     coords = representation["coordinates"]
     vconn = representation["vertex connectivity"]
@@ -1221,7 +1342,9 @@ def refine(tiler: Tiler, face_degree):
     elif face_degree == 4:
         new_coords, new_conn = _refine_quads(coords, edges, vconn, econn)
     else:
-        raise ValueError("Expected face degree in {3,4} got face degree = ", face_degree)
+        raise ValueError(
+            "Expected face degree in {3,4} got face degree = ", face_degree
+        )
 
     num_coords = new_coords.shape[0]
     new_coords = dict(zip(range(num_coords), new_coords))
@@ -1229,8 +1352,6 @@ def refine(tiler: Tiler, face_degree):
 
     user_vertices = representation["user vertices"]
     new_tiler = Tiler.from_face_loops(
-        new_conn,
-        vertex_coordinates=new_coords,
-        user_vertices=user_vertices
+        new_conn, vertex_coordinates=new_coords, user_vertices=user_vertices
     )
     return new_tiler
