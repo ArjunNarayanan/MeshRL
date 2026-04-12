@@ -1,0 +1,26 @@
+########################################################################################
+# NOTES: <Include any notes in this section about the experiment>
+#   Hyperparameters obtained by running 50 trials on Optuna
+#
+########################################################################################
+
+environment:
+  name: AngleEnvWithLength
+  initializer:
+    name: FixedRandomPolygon
+    scale: 0.8
+    target_angle: 90
+    polygon_degree: 15
+  face_desired_degree: 4
+  template_size: 20
+  max_edge_addition_steps: 5
+  max_steps_factor: 2
+  face_reward_weight: 0.0
+  vertex_reward_weight: 0.5
+  angle_reward_weight: 0.5
+  face_degree_threshold: 15
+  vertex_degree_threshold: 8
+feature_extractor:
+  type: Convolution
+  number_of_layers: 5
+  output_features: 128

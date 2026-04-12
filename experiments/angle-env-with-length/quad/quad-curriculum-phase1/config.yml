@@ -1,0 +1,63 @@
+########################################################################################
+# quad-curriculum-phase1  —  SMALL POLYGONS
+#
+# The global-split operation requires ~4-6 specific moves with no intermediate reward.
+# On a small polygon (4-8 sides) the entire sequence is discoverable within the
+# template window, whereas on a 20-sided polygon the agent needs to navigate a much
+# larger graph first.
+#
+# This config trains on small polygons (4-8 sides) so the agent encounters
+# global-split scenarios constantly and can learn the pattern with high entropy.
+#
+# After this run completes, use quad-curriculum-phase2 to fine-tune on the full range.
+#
+# Key settings:
+#   polygon range   : 4-8   (tiny geometries only)
+#   ent_coef        : 1e-2  (aggressive exploration — find global-split)
+#   vertex_reward   : 0.45  (vertex regularity is the goal here)
+#   face_reward     : 0.30
+#   total_timesteps : 15M
+########################################################################################
+
+environment:
+  name: AngleEnvWithLength
+  initializer:
+    name: RandomPolygon
+    min_polygon_degree: 4
+    max_polygon_degree: 8
+    scale: 0.8
+    target_angle: 90
+  face_desired_degree: 4
+  template_size: 20
+  max_edge_addition_steps: 5
+  max_steps_factor: 2
+  face_reward_weight: 0.30
+  vertex_reward_weight: 0.45
+  angle_reward_weight: 0.25
+  face_degree_threshold: 15
+  vertex_degree_threshold: 8
+
+feature_extractor:
+  type: Convolution
+  output_features: 128
+  number_of_layers: 5
+
+policy:
+  use_critic: True
+  ortho_init: False
+
+PPO:
+  gamma: 1.0
+  n_steps: 1024
+  batch_size: 512
+  gae_lambda: 0.86
+  ent_coef: 1.0e-2
+  vf_coef: 0.1488
+  clip_range: 0.189
+  max_grad_norm: 1.3
+  learning_rate: 1.0e-4
+
+evaluator:
+  num_evaluations: 150
+
+total_timesteps: 15_000_000

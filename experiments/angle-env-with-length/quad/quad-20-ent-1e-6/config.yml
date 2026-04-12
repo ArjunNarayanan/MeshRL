@@ -1,0 +1,42 @@
+########################################################################################
+# NOTES: <Include any notes in this section about the experiment>
+#   Increasing ent_coef from 2e-8 to 1e-6 to encourage more exploration
+########################################################################################
+
+environment:
+  name: AngleEnvWithLength
+  initializer:
+    name: RandomPolygon
+    min_polygon_degree: 6
+    max_polygon_degree: 20
+    scale: 0.8
+    target_angle: 90
+  face_desired_degree: 4
+  template_size: 20
+  max_edge_addition_steps: 5
+  max_steps_factor: 2
+  face_reward_weight: 0.5
+  vertex_reward_weight: 0.25
+  angle_reward_weight: 0.25
+  face_degree_threshold: 15
+  vertex_degree_threshold: 8
+feature_extractor:
+  type: Convolution
+  output_features: 128
+  number_of_layers: 5
+policy:
+  use_critic: True
+  ortho_init: False
+PPO:
+  gamma: 1.0
+  n_steps: 1024
+  batch_size: 512
+  gae_lambda: 0.86
+  ent_coef: 1.e-6
+  vf_coef: 0.1488
+  clip_range: 0.189
+  max_grad_norm: 1.3
+  learning_rate: 1.e-4
+evaluator:
+  num_evaluations: 200
+total_timesteps: 10_000_000

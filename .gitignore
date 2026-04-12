@@ -1,7 +1,6 @@
 .idea/*
 __pycache__/
 *.DS_Store
-experiments/
 bash_scripts/
 job_scripts/
 *.out
@@ -9,3 +8,13 @@ job_scripts/
 *.pkl
 *.pdf
 venv/*
+
+# Experiments: track configs, ignore artifacts
+experiments/**/*.zip
+experiments/**/*.pkl
+experiments/**/*.png
+experiments/**/*.pdf
+experiments/**/*.csv
+experiments/**/*.log
+experiments/**/events.out.tfevents.*
+experiments/**/tensorboard/

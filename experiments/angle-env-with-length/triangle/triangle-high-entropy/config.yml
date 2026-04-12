@@ -1,0 +1,55 @@
+########################################################################################
+# triangle-high-entropy
+#
+# Problem: triangle model never inserts interior vertices (required for optimal
+# triangulation of e.g. hexagons). Entropy coef 4e-5 is too low to explore this.
+#
+# Changes from baseline triangle-20-angles:
+#   ent_coef        : 4e-5   →  5e-3   (much more exploration)
+#   vertex_reward   : 0.25   →  0.40
+#   face_reward     : 0.50   →  0.35
+#   total_timesteps : 10M    →  30M
+########################################################################################
+
+environment:
+  name: AngleEnvWithLength
+  initializer:
+    name: RandomPolygon
+    min_polygon_degree: 6
+    max_polygon_degree: 20
+    scale: 0.8
+    target_angle: 60
+  face_desired_degree: 3
+  template_size: 20
+  max_edge_addition_steps: 5
+  max_steps_factor: 2
+  face_reward_weight: 0.35
+  vertex_reward_weight: 0.40
+  angle_reward_weight: 0.25
+  face_degree_threshold: 15
+  vertex_degree_threshold: 10
+
+feature_extractor:
+  type: Convolution
+  number_of_layers: 3
+  output_features: 128
+
+policy:
+  use_critic: True
+  ortho_init: True
+
+PPO:
+  gamma: 1.0
+  n_steps: 1024
+  batch_size: 512
+  gae_lambda: 0.86
+  ent_coef: 5.0e-3
+  vf_coef: 0.05
+  clip_range: 0.15
+  max_grad_norm: 2.0
+  learning_rate: 5.0e-5
+
+evaluator:
+  num_evaluations: 200
+
+total_timesteps: 30_000_000

@@ -1,0 +1,33 @@
+########################################################################################
+# NOTES: <Include any notes in this section about the experiment>
+#     BASE:
+#           - Baseline model for triangles
+#     CHANGELOG:
+#
+#     HYPOTHESIS:
+#
+#     OBSERVATIONS:
+#
+#
+########################################################################################
+
+study_name: triangle-20
+environment:
+  name: AngleEnvWithLength
+  initializer:
+    name: RandomPolygon
+    min_polygon_degree: 6
+    max_polygon_degree: 20
+    scale: 0.8
+    target_angle: 60
+  face_desired_degree: 3
+  template_size: 20
+  max_edge_addition_steps: 4
+  max_steps_factor: 3
+  face_reward_weight: 0.4
+  vertex_reward_weight: 0.3
+  angle_reward_weight: 0.3
+  face_degree_threshold: 15
+  vertex_degree_threshold: 10
+total_timesteps: 1_000_000
+num_trials: 10

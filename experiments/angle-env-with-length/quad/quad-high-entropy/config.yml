@@ -1,0 +1,58 @@
+########################################################################################
+# quad-high-entropy
+#
+# Problem: the optimised quad model has ent_coef=2.6e-8 — almost zero exploration.
+# It achieves sf=0 but gets stuck before learning the global-split operation that
+# would reduce vertex irregularity.
+#
+# Changes from baseline quad-20-angles:
+#   ent_coef        : 2.6e-8  →  5e-3   (massive increase in exploration)
+#   vertex_reward   : 0.25    →  0.40   (push harder for regularity)
+#   face_reward     : 0.50    →  0.35   (slightly relax face-score dominance)
+#   total_timesteps : 10M     →  30M    (more time to discover global-split)
+#
+# Expected outcome: model still achieves sf=0 but also reduces irregular vertices.
+########################################################################################
+
+environment:
+  name: AngleEnvWithLength
+  initializer:
+    name: RandomPolygon
+    min_polygon_degree: 6
+    max_polygon_degree: 20
+    scale: 0.8
+    target_angle: 90
+  face_desired_degree: 4
+  template_size: 20
+  max_edge_addition_steps: 5
+  max_steps_factor: 2
+  face_reward_weight: 0.35
+  vertex_reward_weight: 0.40
+  angle_reward_weight: 0.25
+  face_degree_threshold: 15
+  vertex_degree_threshold: 8
+
+feature_extractor:
+  type: Convolution
+  output_features: 128
+  number_of_layers: 5
+
+policy:
+  use_critic: True
+  ortho_init: False
+
+PPO:
+  gamma: 1.0
+  n_steps: 1024
+  batch_size: 512
+  gae_lambda: 0.86
+  ent_coef: 5.0e-3
+  vf_coef: 0.1488
+  clip_range: 0.189
+  max_grad_norm: 1.3
+  learning_rate: 5.0e-5
+
+evaluator:
+  num_evaluations: 200
+
+total_timesteps: 30_000_000
