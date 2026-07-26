@@ -18,3 +18,5 @@ experiments/**/*.csv
 experiments/**/*.log
 experiments/**/events.out.tfevents.*
 experiments/**/tensorboard/
+# personal game records (local state, not code)
+game/records.json
