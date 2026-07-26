@@ -1,3 +1,5 @@
+/* Mesh Quest — Copyright 2026 Arjun Narayanan. All rights reserved.
+ * Licensed under the PolyForm Noncommercial License 1.0.0 (see LICENSE). */
 :root {
   --paper: #f3f5f7;
   --panel: #ffffff;
@@ -572,8 +574,10 @@ label.auto {
   bottom: 16px;
   font-size: 11px;
   color: var(--muted);
-  pointer-events: none;
+  max-width: 46%;
 }
+.credit a { color: var(--muted); }
+.credit a:hover { color: var(--accent); }
 
 @media (prefers-reduced-motion: reduce) {
   #heart.pop .glyph { animation: none; }

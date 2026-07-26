@@ -1,5 +1,8 @@
 """Interactive mesh-editing game server.
 
+Copyright 2026 Arjun Narayanan. All rights reserved.
+Licensed under the PolyForm Noncommercial License 1.0.0 (see LICENSE).
+
 Wraps src.tiler.Tiler with a small JSON API and serves a single-page UI.
 Run from the repo root (or anywhere):
 

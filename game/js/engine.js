@@ -1,3 +1,7 @@
+/* Mesh Quest — Copyright 2026 Arjun Narayanan. All rights reserved.
+ * Licensed under the PolyForm Noncommercial License 1.0.0 (see LICENSE).
+ * Free for noncommercial use; commercial use requires a separate license.
+ */
 /* Mesh Quest engine: JavaScript port of the game subset of src/tiler.py.
  *
  * Faithful to the Python implementation including ID assignment order, so

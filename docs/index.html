@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mesh Quest</title>
 <style>
+/* Mesh Quest — Copyright 2026 Arjun Narayanan. All rights reserved.
+ * Licensed under the PolyForm Noncommercial License 1.0.0 (see LICENSE). */
 :root {
   --paper: #f3f5f7;
   --panel: #ffffff;
@@ -579,8 +581,10 @@ label.auto {
   bottom: 16px;
   font-size: 11px;
   color: var(--muted);
-  pointer-events: none;
+  max-width: 46%;
 }
+.credit a { color: var(--muted); }
+.credit a:hover { color: var(--accent); }
 
 @media (prefers-reduced-motion: reduce) {
   #heart.pop .glyph { animation: none; }
@@ -664,7 +668,7 @@ label.auto {
   <canvas id="confetti"></canvas>
   <button id="prev" class="lvlarrow" title="Previous level">&larr;</button>
   <button id="next" class="lvlarrow" title="Next level">&rarr;</button>
-  <div class="credit">half-edge engine from the MeshRL dissertation code</div>
+  <div class="credit">Mesh Quest &copy; 2026 Arjun Narayanan &middot; half-edge engine from the MeshRL dissertation code &middot; <a href="https://github.com/ArjunNarayanan/MeshRL/blob/main/LICENSE" target="_blank" rel="noopener">noncommercial license</a></div>
   <div class="corner-actions">
     <button id="heart" title="Love it?"><span class="glyph">&#9825;</span> <span class="label">Love it</span></button>
     <a id="star" href="https://github.com/ArjunNarayanan/MeshRL" target="_blank" rel="noopener">&#9733; Star on GitHub</a>
@@ -682,6 +686,10 @@ label.auto {
   <div id="toast"></div>
 </div>
 <script>
+/* Mesh Quest — Copyright 2026 Arjun Narayanan. All rights reserved.
+ * Licensed under the PolyForm Noncommercial License 1.0.0 (see LICENSE).
+ * Free for noncommercial use; commercial use requires a separate license.
+ */
 /* Mesh Quest engine: JavaScript port of the game subset of src/tiler.py.
  *
  * Faithful to the Python implementation including ID assignment order, so
@@ -1568,6 +1576,10 @@ class Game {
 if (typeof module !== "undefined") {
   module.exports = { Game, Mesh, SHAPES, GameError, QUALITY_THRESHOLD };
 }
+/* Mesh Quest — Copyright 2026 Arjun Narayanan. All rights reserved.
+ * Licensed under the PolyForm Noncommercial License 1.0.0 (see LICENSE).
+ * Free for noncommercial use; commercial use requires a separate license.
+ */
 // --- UI ---------------------------------------------------------------------
 
 const storage = {

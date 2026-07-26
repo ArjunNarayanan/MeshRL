@@ -161,3 +161,25 @@ mesh.delete_source_vertex(11)
 ```
 
 <img src="examples/figures/operations/delete-vertex.png" alt="drawing" width="500"/>
+
+## Mesh Quest — play it
+
+An interactive puzzle built on this half-edge engine: decompose a shape into
+quadrilaterals, scored by vertex regularity. Each level's **par** is the
+discrete Gauss–Bonnet lower bound on that score, so winning means reaching a
+provable topological optimum.
+
+**Play: https://arjunnarayanan.github.io/MeshRL/**
+
+- `game/server.py` — local server wrapping `src.tiler.Tiler` (ground truth)
+- `game/js/engine.js` — JS port of the game subset, verified against the Python
+  engine by replaying identical op traces with exact state comparison
+- `game/build.sh` — assembles the single-file builds from `game/src`
+
+## License
+
+Copyright 2026 Arjun Narayanan. All rights reserved.
+
+Released under the [PolyForm Noncommercial License 1.0.0](LICENSE): free for any
+noncommercial purpose — playing, teaching, and academic research — while
+commercial use requires a separate license from the copyright holder.
