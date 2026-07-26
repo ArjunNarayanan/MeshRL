@@ -322,6 +322,23 @@ label.auto {
   box-shadow: 0 6px 18px var(--shadow);
 }
 
+#star {
+  position: absolute;
+  right: 60px;
+  bottom: 16px;
+  display: inline-block;
+  font-size: 12.5px;
+  text-decoration: none;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  padding: 7px 14px;
+  box-shadow: 0 2px 8px var(--shadow);
+  transition: transform 0.15s;
+}
+#star:hover { color: var(--ink); border-color: var(--accent); transform: translateY(-1px); }
+#star:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 #log-export {
   position: absolute;
   right: 16px;
@@ -580,6 +597,9 @@ label.auto {
   }
   label.auto { font-size: 12px; }
   .credit { display: none; }
+  #star { font-size: 11.5px; padding: 6px 11px; right: 54px; bottom: 12px; }
+  #log-export { right: 12px; bottom: 12px; }
+  body.card-open #star, body.card-open #log-export { display: none; }
   .lvlarrow { width: 52px; height: 52px; font-size: 22px; }
   #next.win { width: 64px; height: 64px; font-size: 30px; }
 }
@@ -620,6 +640,7 @@ label.auto {
   <button id="prev" class="lvlarrow" title="Previous level">&larr;</button>
   <button id="next" class="lvlarrow" title="Next level">&rarr;</button>
   <div class="credit">half-edge engine from the MeshRL dissertation code</div>
+  <a id="star" href="https://github.com/ArjunNarayanan/MeshRL" target="_blank" rel="noopener">&#9733; Star on GitHub</a>
   <button id="log-export" title="Export activity log">&#10515;</button>
   <div id="tutcard">
     <button id="tut-skip" title="Minimize">&minus;</button>
@@ -2351,6 +2372,7 @@ document.getElementById("prev").addEventListener("click", () => {
   gotoShape(shapes[(shapes.indexOf(state.shape) - 1 + shapes.length) % shapes.length], "level_prev");
 });
 document.getElementById("tut-open").addEventListener("click", tutStart);
+document.getElementById("star").addEventListener("click", () => logEvent("star_click"));
 document.getElementById("log-export").addEventListener("click", () => {
   const blob = new Blob([JSON.stringify(activityLog, null, 1)], { type: "application/json" });
   const a = document.createElement("a");
