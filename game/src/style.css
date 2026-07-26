@@ -315,10 +315,34 @@ label.auto {
   box-shadow: 0 6px 18px var(--shadow);
 }
 
-#star {
+.corner-actions {
   position: absolute;
-  right: 60px;
+  right: 16px;
   bottom: 16px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+#heart {
+  font-size: 12.5px;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  padding: 7px 14px;
+  box-shadow: 0 2px 8px var(--shadow);
+  transition: transform 0.15s;
+}
+#heart .glyph { font-size: 14px; }
+#heart:hover { color: var(--bad); border-color: var(--bad); transform: translateY(-1px); }
+#heart.hearted { color: var(--bad); border-color: var(--bad); }
+#heart.pop .glyph { animation: heart-pop 0.5s ease-out; display: inline-block; }
+@keyframes heart-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.6); }
+  100% { transform: scale(1); }
+}
+#star {
   display: inline-block;
   font-size: 12.5px;
   text-decoration: none;
@@ -333,9 +357,6 @@ label.auto {
 #star:hover { color: var(--ink); border-color: var(--accent); transform: translateY(-1px); }
 #star:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 #log-export {
-  position: absolute;
-  right: 16px;
-  bottom: 16px;
   width: 34px;
   height: 34px;
   border-radius: 50%;
@@ -555,6 +576,7 @@ label.auto {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  #heart.pop .glyph { animation: none; }
   #next { transition: none; }
   #toast { transition: none; }
 }
@@ -590,9 +612,10 @@ label.auto {
   }
   label.auto { font-size: 12px; }
   .credit { display: none; }
-  #star { font-size: 11.5px; padding: 6px 11px; right: 54px; bottom: 12px; }
-  #log-export { right: 12px; bottom: 12px; }
-  body.card-open #star, body.card-open #log-export { display: none; }
+  .corner-actions { right: 12px; bottom: 12px; gap: 6px; }
+  #star, #heart { font-size: 11.5px; padding: 6px 10px; }
+  #heart .label { display: none; }
+  body.card-open .corner-actions { display: none; }
   .lvlarrow { width: 52px; height: 52px; font-size: 22px; }
   #next.win { width: 64px; height: 64px; font-size: 30px; }
 }

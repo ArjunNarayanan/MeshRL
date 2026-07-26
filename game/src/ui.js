@@ -831,6 +831,32 @@ document.getElementById("prev").addEventListener("click", () => {
 });
 document.getElementById("tut-open").addEventListener("click", tutStart);
 document.getElementById("star").addEventListener("click", () => logEvent("star_click"));
+
+// Heart: one per browser, so the counter reads "people who loved it" rather
+// than "clicks". Counted as a GoatCounter event on the public build; on builds
+// without analytics the button still gives feedback, it just isn't tallied.
+const heartBtn = document.getElementById("heart");
+let hearted = false;
+try { hearted = localStorage.getItem("meshquest-hearted") === "1"; } catch {}
+function paintHeart() {
+  heartBtn.classList.toggle("hearted", hearted);
+  heartBtn.querySelector(".glyph").innerHTML = hearted ? "&#9829;" : "&#9825;";
+  heartBtn.title = hearted ? "Thanks for the love!" : "Love it?";
+}
+paintHeart();
+heartBtn.addEventListener("click", () => {
+  if (hearted) { toast("\u2665 Already loved — thank you!"); return; }
+  hearted = true;
+  try { localStorage.setItem("meshquest-hearted", "1"); } catch {}
+  paintHeart();
+  heartBtn.classList.add("pop");
+  setTimeout(() => heartBtn.classList.remove("pop"), 600);
+  logEvent("heart");
+  if (window.goatcounter && typeof window.goatcounter.count === "function") {
+    window.goatcounter.count({ path: "heart", title: "Heart", event: true });
+  }
+  toast("\u2665 Thank you!");
+});
 document.getElementById("log-export").addEventListener("click", () => {
   const blob = new Blob([JSON.stringify(activityLog, null, 1)], { type: "application/json" });
   const a = document.createElement("a");

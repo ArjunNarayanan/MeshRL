@@ -322,10 +322,34 @@ label.auto {
   box-shadow: 0 6px 18px var(--shadow);
 }
 
-#star {
+.corner-actions {
   position: absolute;
-  right: 60px;
+  right: 16px;
   bottom: 16px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+#heart {
+  font-size: 12.5px;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  padding: 7px 14px;
+  box-shadow: 0 2px 8px var(--shadow);
+  transition: transform 0.15s;
+}
+#heart .glyph { font-size: 14px; }
+#heart:hover { color: var(--bad); border-color: var(--bad); transform: translateY(-1px); }
+#heart.hearted { color: var(--bad); border-color: var(--bad); }
+#heart.pop .glyph { animation: heart-pop 0.5s ease-out; display: inline-block; }
+@keyframes heart-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.6); }
+  100% { transform: scale(1); }
+}
+#star {
   display: inline-block;
   font-size: 12.5px;
   text-decoration: none;
@@ -340,9 +364,6 @@ label.auto {
 #star:hover { color: var(--ink); border-color: var(--accent); transform: translateY(-1px); }
 #star:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 #log-export {
-  position: absolute;
-  right: 16px;
-  bottom: 16px;
   width: 34px;
   height: 34px;
   border-radius: 50%;
@@ -562,6 +583,7 @@ label.auto {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  #heart.pop .glyph { animation: none; }
   #next { transition: none; }
   #toast { transition: none; }
 }
@@ -597,9 +619,10 @@ label.auto {
   }
   label.auto { font-size: 12px; }
   .credit { display: none; }
-  #star { font-size: 11.5px; padding: 6px 11px; right: 54px; bottom: 12px; }
-  #log-export { right: 12px; bottom: 12px; }
-  body.card-open #star, body.card-open #log-export { display: none; }
+  .corner-actions { right: 12px; bottom: 12px; gap: 6px; }
+  #star, #heart { font-size: 11.5px; padding: 6px 10px; }
+  #heart .label { display: none; }
+  body.card-open .corner-actions { display: none; }
   .lvlarrow { width: 52px; height: 52px; font-size: 22px; }
   #next.win { width: 64px; height: 64px; font-size: 30px; }
 }
@@ -640,8 +663,11 @@ label.auto {
   <button id="prev" class="lvlarrow" title="Previous level">&larr;</button>
   <button id="next" class="lvlarrow" title="Next level">&rarr;</button>
   <div class="credit">half-edge engine from the MeshRL dissertation code</div>
-  <a id="star" href="https://github.com/ArjunNarayanan/MeshRL" target="_blank" rel="noopener">&#9733; Star on GitHub</a>
-  <button id="log-export" title="Export activity log">&#10515;</button>
+  <div class="corner-actions">
+    <button id="heart" title="Love it?"><span class="glyph">&#9825;</span> <span class="label">Love it</span></button>
+    <a id="star" href="https://github.com/ArjunNarayanan/MeshRL" target="_blank" rel="noopener">&#9733; Star on GitHub</a>
+    <button id="log-export" title="Export activity log">&#10515;</button>
+  </div>
   <div id="tutcard">
     <button id="tut-skip" title="Minimize">&minus;</button>
     <div class="eyebrow" id="tut-eyebrow"></div>
@@ -2373,6 +2399,32 @@ document.getElementById("prev").addEventListener("click", () => {
 });
 document.getElementById("tut-open").addEventListener("click", tutStart);
 document.getElementById("star").addEventListener("click", () => logEvent("star_click"));
+
+// Heart: one per browser, so the counter reads "people who loved it" rather
+// than "clicks". Counted as a GoatCounter event on the public build; on builds
+// without analytics the button still gives feedback, it just isn't tallied.
+const heartBtn = document.getElementById("heart");
+let hearted = false;
+try { hearted = localStorage.getItem("meshquest-hearted") === "1"; } catch {}
+function paintHeart() {
+  heartBtn.classList.toggle("hearted", hearted);
+  heartBtn.querySelector(".glyph").innerHTML = hearted ? "&#9829;" : "&#9825;";
+  heartBtn.title = hearted ? "Thanks for the love!" : "Love it?";
+}
+paintHeart();
+heartBtn.addEventListener("click", () => {
+  if (hearted) { toast("\u2665 Already loved — thank you!"); return; }
+  hearted = true;
+  try { localStorage.setItem("meshquest-hearted", "1"); } catch {}
+  paintHeart();
+  heartBtn.classList.add("pop");
+  setTimeout(() => heartBtn.classList.remove("pop"), 600);
+  logEvent("heart");
+  if (window.goatcounter && typeof window.goatcounter.count === "function") {
+    window.goatcounter.count({ path: "heart", title: "Heart", event: true });
+  }
+  toast("\u2665 Thank you!");
+});
 document.getElementById("log-export").addEventListener("click", () => {
   const blob = new Blob([JSON.stringify(activityLog, null, 1)], { type: "application/json" });
   const a = document.createElement("a");
