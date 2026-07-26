@@ -1,0 +1,47 @@
+<header>
+  <div class="brand">
+    <h1>MESH QUEST</h1>
+    <div class="sub">a quad-meshing puzzle</div>
+  </div>
+  <div class="readouts">
+    <div class="readout" id="r-score"><div class="label">Score</div><div class="value" id="s-vertex">–</div></div>
+    <div class="readout" id="r-par"><div class="label">Par</div><div class="value" id="s-par">–</div></div>
+    <div class="readout" id="r-quality"><div class="label">Quality</div><div class="value" id="s-quality">–</div></div>
+    <div class="readout"><div class="label">Moves</div><div class="value" id="s-moves">–</div></div>
+    <div class="readout"><div class="label">Best</div><div class="value" id="s-best">–</div></div>
+  </div>
+  <div class="spacer"></div>
+  <div class="controls">
+    <select id="shape" aria-label="Level"></select>
+    <button id="reset">New game</button>
+  </div>
+</header>
+<div class="toolbar">
+  <button class="mode" data-mode="insert_vertex"><kbd>1</kbd>+ Vertex</button>
+  <button class="mode" data-mode="delete_vertex"><kbd>2</kbd>&minus; Vertex</button>
+  <button class="mode" data-mode="insert_edge"><kbd>3</kbd>+ Edge</button>
+  <button class="mode" data-mode="delete_edge"><kbd>4</kbd>&minus; Edge</button>
+  <button id="undo"><kbd style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;opacity:.55;margin-right:5px">u</kbd>Undo</button>
+  <button id="smoothbtn"><kbd style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;opacity:.55;margin-right:5px">s</kbd>Smooth</button>
+  <label class="auto"><input type="checkbox" id="autosmooth" checked> auto-smooth</label>
+  <span class="hint" id="hint"></span>
+</div>
+<div id="stage">
+  <svg id="canvas"></svg>
+  <canvas id="confetti"></canvas>
+  <button id="prev" class="lvlarrow" title="Previous level">&larr;</button>
+  <button id="next" class="lvlarrow" title="Next level">&rarr;</button>
+  <div class="credit">half-edge engine from the MeshRL dissertation code</div>
+  <a id="star" href="https://github.com/ArjunNarayanan/MeshRL" target="_blank" rel="noopener">&#9733; Star on GitHub</a>
+  <button id="log-export" title="Export activity log">&#10515;</button>
+  <div id="tutcard">
+    <button id="tut-skip" title="Minimize">&minus;</button>
+    <div class="eyebrow" id="tut-eyebrow"></div>
+    <div class="body" id="tut-body"></div>
+    <div class="actions">
+      <button id="tut-next">Next</button>
+    </div>
+  </div>
+  <button id="tut-open" title="Tutorial">&#128075;</button>
+  <div id="toast"></div>
+</div>
