@@ -18,6 +18,25 @@ engine="$root/game/js/engine.js"
 analytics='<script data-goatcounter="https://arjunnarayanan.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>'
 
+# Social-card metadata for link previews (LinkedIn, Slack, iMessage, X...).
+# Absolute URLs are required: preview crawlers do not resolve relative paths.
+site="https://arjunnarayanan.github.io/MeshRL/"
+social='<meta name="description" content="Slice shapes into perfect four-sided blocks. Simple to play, tricky to master.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Mesh Quest">
+<meta property="og:title" content="Mesh Quest — slice shapes into blocks">
+<meta property="og:description" content="A free puzzle game: cut each shape into four-sided blocks and chase a perfect score. Easy to pick up, surprisingly deep.">
+<meta property="og:url" content="'"$site"'">
+<meta property="og:image" content="'"$site"'preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Three shapes — an L, a star and a square ring — each cut into four-sided blocks.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Mesh Quest — slice shapes into blocks">
+<meta name="twitter:description" content="A free puzzle game: cut each shape into four-sided blocks and chase a perfect score.">
+<meta name="twitter:image" content="'"$site"'preview.png">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>%F0%9F%94%B7</text></svg>">'
+
 emit_head() {
   echo '<title>Mesh Quest</title>'
   echo '<style>'
@@ -33,14 +52,16 @@ emit_body() {
   echo '</script>'
 }
 
-standalone() {  # $1 = extra head markup
+standalone() {  # "$@" = extra head blocks, each emitted on its own line
   echo '<!doctype html>'
   echo '<html lang="en">'
   echo '<head>'
   echo '<meta charset="utf-8">'
   echo '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">'
   emit_head
-  [ -n "$1" ] && echo "$1"
+  for block in "$@"; do
+    [ -n "$block" ] && printf '%s\n' "$block"
+  done
   echo '</head>'
   echo '<body>'
   emit_body
@@ -50,7 +71,7 @@ standalone() {  # $1 = extra head markup
 
 standalone "" > "$root/game/mesh-quest.html"
 mkdir -p "$root/docs"
-standalone "$analytics" > "$root/docs/index.html"
+standalone "$social" "$analytics" > "$root/docs/index.html"
 
 if [ $# -ge 1 ]; then
   { emit_head; emit_body; } > "$1"
